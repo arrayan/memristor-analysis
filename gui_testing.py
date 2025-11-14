@@ -10,7 +10,7 @@ class MainWindow(qt.QMainWindow):
 
     def init_ui(self):
         # Create tab widget
-        tabs = qt.QTabWidget()
+        self.tabs = qt.QTabWidget()
 
         # Analysis tab
         analysis_tab = qt.QWidget()
@@ -65,14 +65,15 @@ class MainWindow(qt.QMainWindow):
         help_tab.setLayout(help_layout)
 
         # Add tabs to the widget
-        tabs.addTab(analysis_tab, "Analysis")
-        tabs.addTab(help_tab, "Help")
+        self.tabs.addTab(analysis_tab, "Analysis")
+        self.tabs.addTab(help_tab, "Help")
 
-        self.setCentralWidget(tabs)
+        self.setCentralWidget(self.tabs)
 
         # Menu bar
         menu_bar = self.menuBar()
         file_menu = menu_bar.addMenu("File")
+    
 
         import_action = QAction("Import", self)
         import_action.triggered.connect(self.browse_file)  # Menu also opens dialog
@@ -82,14 +83,25 @@ class MainWindow(qt.QMainWindow):
         file_menu.addAction(import_action)
         file_menu.addAction(exit_action)
 
+        # Help menu
+        help_menu = menu_bar.addMenu("Help")
+        help_action = QAction("View Help", self)
+        help_action.triggered.connect(self.show_help_tab)
+        help_menu.addAction(help_action)
+
         self.setWindowTitle("MemResistor Analysis Tool")
         self.resize(600, 400)
+        self.showMaximized()
 
     def browse_file(self):
         file_path, _ = qt.QFileDialog.getOpenFileName(self, "Select file")
         if file_path:
             self.import_path_label.setText(file_path)  # Show chosen file
             # Testing Pull request
+
+    def show_help_tab(self):
+        """Switch to the help tab"""
+        self.tabs.setCurrentIndex(1)  # Help tab is at index 1
 
 if __name__ == "__main__":
     app = qt.QApplication(sys.argv)
