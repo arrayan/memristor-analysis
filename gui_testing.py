@@ -9,12 +9,16 @@ class MainWindow(qt.QMainWindow):
         self.init_ui()
 
     def init_ui(self):
-        # Central layout
+        # Create tab widget
+        tabs = qt.QTabWidget()
+
+        # Analysis tab
+        analysis_tab = qt.QWidget()
+        analysis_layout = qt.QVBoxLayout()
+        
         window_title = qt.QLabel("Analysis here")
         window_title.setAlignment(Qt.AlignCenter)
-
-        layout = qt.QVBoxLayout()
-        layout.addWidget(window_title)
+        analysis_layout.addWidget(window_title)
 
         # Import panel at the bottom
         import_panel = qt.QWidget()
@@ -28,11 +32,43 @@ class MainWindow(qt.QMainWindow):
         import_layout.addWidget(import_button)
         import_panel.setLayout(import_layout)
 
-        layout.addWidget(import_panel)
+        analysis_layout.addWidget(import_panel)
+        analysis_tab.setLayout(analysis_layout)
 
-        central_widget = qt.QWidget()
-        central_widget.setLayout(layout)
-        self.setCentralWidget(central_widget)
+        # Help tab
+        help_tab = qt.QWidget()
+        help_layout = qt.QVBoxLayout()
+        
+        help_title = qt.QLabel("Help & Documentation")
+        help_title.setStyleSheet("font-weight: bold; font-size: 14px;")
+        
+        help_text = qt.QTextEdit()
+        help_text.setReadOnly(True)
+        help_text.setText(
+            "<h2>MemResistor Analysis Tool</h2>"
+            "<p><b>Getting Started:</b></p>"
+            "<ul>"
+            "<li>Click 'Browse' to select a file for analysis</li>"
+            "<li>The selected file path will appear in the import panel</li>"
+            "</ul>"
+            "<p><b>Features:</b></p>"
+            "<ul>"
+            "<li>Import and analyze memristor data files</li>"
+            "<li>View analysis results in the Analysis tab</li>"
+            "</ul>"
+            "<p><b>Need Help?</b></p>"
+            "<p>For more information, check the File menu or contact support.</p>"
+        )
+        
+        help_layout.addWidget(help_title)
+        help_layout.addWidget(help_text)
+        help_tab.setLayout(help_layout)
+
+        # Add tabs to the widget
+        tabs.addTab(analysis_tab, "Analysis")
+        tabs.addTab(help_tab, "Help")
+
+        self.setCentralWidget(tabs)
 
         # Menu bar
         menu_bar = self.menuBar()
@@ -47,7 +83,7 @@ class MainWindow(qt.QMainWindow):
         file_menu.addAction(exit_action)
 
         self.setWindowTitle("MemResistor Analysis Tool")
-        self.resize(500, 200)
+        self.resize(600, 400)
 
     def browse_file(self):
         file_path, _ = qt.QFileDialog.getOpenFileName(self, "Select file")
