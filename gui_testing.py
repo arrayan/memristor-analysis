@@ -53,6 +53,7 @@ class MainWindow(qt.QMainWindow):
         file_path, _ = qt.QFileDialog.getOpenFileName(self, "Select file")
         if file_path:
             self.import_path_label.setText(file_path)  # Show chosen file
+            # Testing Pull request
 
 if __name__ == "__main__":
     app = qt.QApplication(sys.argv)
