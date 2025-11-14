@@ -11,8 +11,8 @@ graph TD
     Output[(Output<br/>Plots & Results)]
 
     %% Flow
-    User -->|Interacts| GUI
-    GUI -->|Commands| Backend
-    Backend -->|Feedback| GUI
-    Input -->|Read| Backend
-    Backend -->|Write| Output
+    User --- |Interact| GUI
+    GUI --- |Command| Backend
+    Backend --- |Feedback| GUI
+    Input --- |Read| Backend
+    Backend --- |Write| Output
