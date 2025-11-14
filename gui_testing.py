@@ -2,6 +2,7 @@ import sys
 import PySide6.QtWidgets as qt
 from PySide6.QtGui import QAction
 from PySide6.QtCore import Qt
+from graph_section import GraphSection
 
 class MainWindow(qt.QMainWindow):
     def __init__(self):
@@ -19,6 +20,10 @@ class MainWindow(qt.QMainWindow):
         window_title = qt.QLabel("Analysis here")
         window_title.setAlignment(Qt.AlignCenter)
         analysis_layout.addWidget(window_title)
+
+        # Create graph section using the separate class
+        self.graph_section = GraphSection()
+        analysis_layout.addWidget(self.graph_section, stretch=1)
 
         # Import panel at the bottom
         import_panel = qt.QWidget()
