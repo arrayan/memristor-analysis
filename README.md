@@ -6,3 +6,7 @@ To set up the needed dependencies run the following commands:
 2. virtualenv venv
 3. source venv/bin/activate
 4. pip install -r requirements.txt
+
+For developers:
+After adding a new package to the venv, the current state can be saved with the following command.
+pip freeze > requirements.txt
