@@ -100,6 +100,7 @@ class MainWindow(qt.QMainWindow):
             "<li>View analysis results in the I-V-T graphs</li>"
             "</ul>"
             "<p><b>Need Help?</b></p>"
+            "<p><b>Sample text added to test pull request.</b></p>"
             "<p>For more information, check the Help menu or contact support.</p>"
         )
         
