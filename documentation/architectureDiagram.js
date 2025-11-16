@@ -9,7 +9,6 @@ graph TD
     %% Data
     Input[(Input Files<br/>.xlsx, .csv, .txt)]
     Output[(Output<br/>Plots & Results)]
-        TESTING
 
     %% Flow
     User --- |Interact| GUI
