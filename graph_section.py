@@ -1,6 +1,7 @@
 import PySide6.QtWidgets as qt
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
+from matplotlib.backends.backend_qtagg import NavigationToolbar2QT
 import numpy as np
 
 
@@ -50,7 +51,6 @@ class GraphSection(qt.QGroupBox):
         layout.addWidget(self.canvas)
 
         # toolbar
-        from matplotlib.backends.backend_qtagg import NavigationToolbar2QT
         toolbar = NavigationToolbar2QT(self.canvas,self)
         layout.addWidget(toolbar(
         
