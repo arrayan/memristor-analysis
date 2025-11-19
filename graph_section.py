@@ -48,6 +48,11 @@ class GraphSection(qt.QGroupBox):
         
         self.canvas = FigureCanvas(self.figure)
         layout.addWidget(self.canvas)
+
+        # toolbar
+        from matplotlib.backends.backend_qtagg import NavigationToolbar2QT
+        toolbar = NavigationToolbar2QT(self.canvas,self)
+        layout.addWidget(toolbar(
         
         self.setLayout(layout)
     
