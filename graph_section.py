@@ -52,7 +52,7 @@ class GraphSection(qt.QGroupBox):
 
         # toolbar
         toolbar = NavigationToolbar2QT(self.canvas,self)
-        layout.addWidget(toolbar(
+        layout.addWidget(toolbar)
         
         self.setLayout(layout)
     
@@ -108,11 +108,24 @@ class GraphSection(qt.QGroupBox):
         
         self.figure.tight_layout()
         self.canvas.draw()
-    
+
+    def new_axis(self, ax, xlabel, ylabel, title);
+        ax.set_xlabel(xlabel)
+        ax.set_ylabel(ylabel)
+        ax.set_title(title)
+        ax.grid(True, alpha=0.3)
+
+    def reset_axes(self):
+        self.new_axis(self.ax_iv, 'Voltage (V)','Current (A)', 'I-V Characteristic')
+        self.new_axis(self.ax_it, 'Time (s)','Current (A)', 'I-T Characteristic')
+        self.new_axis(self.ax_vt, 'Time (s)','Voltage (V)', 'V-T Characteristic')
+        self.new_axis(self.ax_rt, 'Time (s)','Resistance (Ω)', 'Resistance-Time')
+     
     def clear_plots(self):
         """Clear all plots"""
         self.ax_iv.clear()
         self.ax_it.clear()
         self.ax_vt.clear()
         self.ax_rt.clear()
+        self.reset_axes()
         self.canvas.draw()
