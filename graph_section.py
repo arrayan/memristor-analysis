@@ -109,7 +109,7 @@ class GraphSection(qt.QGroupBox):
         self.figure.tight_layout()
         self.canvas.draw()
 
-    def new_axis(self, ax, xlabel, ylabel, title);
+    def new_axis(self, ax, xlabel, ylabel, title)：
         ax.set_xlabel(xlabel)
         ax.set_ylabel(ylabel)
         ax.set_title(title)
