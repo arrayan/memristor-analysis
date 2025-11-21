@@ -1,8 +1,10 @@
 import PySide6.QtWidgets as qt
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
+from matplotlib.backends.backend_qtagg import NavigationToolbar2QT
 import numpy as np
-
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QLabel
 
 class GraphSection(qt.QGroupBox):
     """Separate class for graph visualization section - I-V-T graph"""
@@ -12,10 +14,16 @@ class GraphSection(qt.QGroupBox):
     
     def init_ui(self):
         layout = qt.QVBoxLayout()
+
+        # Layout
+        title_label = QLabel("Memristor I-V-T Analysis")
+        title_label.setAlignment(Qt.AlignCenter)
+        title_label.setStyleSheet("font-size: 18px; font-weight: bold;")
+        layout.addWidget(title_label)
         
         # Create a matplotlib figure with 3 subplots for I-V-T graphs
-        self.figure = Figure(figsize=(12, 8), dpi=100)
-        self.figure.suptitle("Memristor I-V-T Analysis", fontsize=14, fontweight='bold')
+        self.figure = Figure(figsize=(12, 8), dpi=100,constrained_layout=True)
+        # self.figure.suptitle("Memristor I-V-T Analysis", fontsize=14, fontweight='bold')
         
         # Create three subplots
         self.ax_iv = self.figure.add_subplot(2, 2, 1)  # I-V Characteristic
@@ -44,10 +52,14 @@ class GraphSection(qt.QGroupBox):
         self.ax_rt.set_title('Resistance-Time')
         self.ax_rt.grid(True, alpha=0.3)
         
-        self.figure.tight_layout()
+        # self.figure.tight_layout()
         
         self.canvas = FigureCanvas(self.figure)
         layout.addWidget(self.canvas)
+
+        # toolbar
+        toolbar = NavigationToolbar2QT(self.canvas,self)
+        layout.addWidget(toolbar)
         
         self.setLayout(layout)
     
@@ -103,11 +115,24 @@ class GraphSection(qt.QGroupBox):
         
         self.figure.tight_layout()
         self.canvas.draw()
-    
+
+    def new_axis(self, ax, xlabel, ylabel, title):
+        ax.set_xlabel(xlabel)
+        ax.set_ylabel(ylabel)
+        ax.set_title(title)
+        ax.grid(True, alpha=0.3)
+
+    def reset_axes(self):
+        self.new_axis(self.ax_iv, 'Voltage (V)','Current (A)', 'I-V Characteristic')
+        self.new_axis(self.ax_it, 'Time (s)','Current (A)', 'I-T Characteristic')
+        self.new_axis(self.ax_vt, 'Time (s)','Voltage (V)', 'V-T Characteristic')
+        self.new_axis(self.ax_rt, 'Time (s)','Resistance (Ω)', 'Resistance-Time')
+     
     def clear_plots(self):
         """Clear all plots"""
         self.ax_iv.clear()
         self.ax_it.clear()
         self.ax_vt.clear()
         self.ax_rt.clear()
+        self.reset_axes()
         self.canvas.draw()
