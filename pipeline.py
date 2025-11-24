@@ -25,7 +25,7 @@ def excel_to_parquet():
     plt.plot(df_sheet['Time'], df_sheet['RESISTANCE'], label="Cycle19")
     plt.xlabel('Time')
     plt.ylabel('Resistance')
-    plt.title(f'Resistance over Time for Cycle19')
+    plt.title('Resistance over Time for Cycle19')
     plt.legend()
     plt.show()
 
