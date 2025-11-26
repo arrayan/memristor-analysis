@@ -4,6 +4,7 @@ from PySide6.QtGui import QAction
 from PySide6.QtCore import Qt
 from GUI.graph_section import GraphSection
 
+
 class MainWindow(qt.QMainWindow):
     def __init__(self):
         super().__init__()
@@ -16,7 +17,7 @@ class MainWindow(qt.QMainWindow):
         # Analysis tab
         analysis_tab = qt.QWidget()
         analysis_layout = qt.QVBoxLayout()
-        
+
         window_title = qt.QLabel("Analysis here")
         window_title.setAlignment(Qt.AlignCenter)
         analysis_layout.addWidget(window_title)
@@ -50,7 +51,6 @@ class MainWindow(qt.QMainWindow):
         # Menu bar
         menu_bar = self.menuBar()
         file_menu = menu_bar.addMenu("File")
-    
 
         import_action = QAction("Import", self)
         import_action.triggered.connect(self.browse_file)  # Menu also opens dialog
@@ -59,7 +59,7 @@ class MainWindow(qt.QMainWindow):
 
         file_menu.addAction(import_action)
         file_menu.addAction(exit_action)
-        #PullRequest
+        # PullRequest
 
         # Help menu
         help_menu = menu_bar.addMenu("Help")
@@ -82,9 +82,9 @@ class MainWindow(qt.QMainWindow):
         help_dialog = qt.QDialog(self)
         help_dialog.setWindowTitle("Help & Documentation")
         help_dialog.setGeometry(100, 100, 600, 400)
-        
+
         layout = qt.QVBoxLayout()
-        
+
         help_text = qt.QTextEdit()
         help_text.setReadOnly(True)
         help_text.setText(
@@ -102,15 +102,16 @@ class MainWindow(qt.QMainWindow):
             "<p><b>Need Help?</b></p>"
             "<p>For more information, check the Help menu or contact support.</p>"
         )
-        
+
         layout.addWidget(help_text)
-        
+
         close_button = qt.QPushButton("Close")
         close_button.clicked.connect(help_dialog.close)
         layout.addWidget(close_button)
-        
+
         help_dialog.setLayout(layout)
         help_dialog.exec()
+
 
 if __name__ == "__main__":
     app = qt.QApplication(sys.argv)
