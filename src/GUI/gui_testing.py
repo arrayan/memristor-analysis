@@ -9,6 +9,7 @@ class MainWindow(qt.QMainWindow):
     def __init__(self):
         super().__init__()
         self.init_ui()
+        # adding a comment
 
     def init_ui(self):
         # Create tab widget
