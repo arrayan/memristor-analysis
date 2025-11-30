@@ -2,7 +2,7 @@ import sys
 import PySide6.QtWidgets as qt
 from PySide6.QtGui import QAction
 from PySide6.QtCore import Qt
-from GUI.graph_section import GraphSection
+from .graph_section import GraphSection
 
 
 class MainWindow(qt.QMainWindow):
@@ -72,10 +72,14 @@ class MainWindow(qt.QMainWindow):
         self.showMaximized()
 
     def browse_file(self):
-        file_path, _ = qt.QFileDialog.getOpenFileName(self, "Select file")
+        # Open file dialog to select Excel file
+        file_path, _ = qt.QFileDialog.getOpenFileName(
+            self, "Select Excel file", "", "Excel Files (*.xlsx)"
+        )
+
         if file_path:
-            self.import_path_label.setText(file_path)  # Show chosen file
-            # Testing Pull request
+            self.import_path_label.setText(file_path)
+        # TODO: Add file handling and data processing here
 
     def show_help_dialog(self):
         """Show help in a dialog window"""
