@@ -1,12 +1,17 @@
 import sys
 import PySide6.QtWidgets as qt
+from PySide6.QtWidgets import QFileDialog, QMessageBox
 from PySide6.QtGui import QAction
 from PySide6.QtCore import Qt
 from .graph_section import GraphSection
+from src.data.data_handler import DataHandler
+from src.data.validators import is_valid_excel
+
 
 
 class MainWindow(qt.QMainWindow):
     def __init__(self):
+        self.loaded_data = None
         super().__init__()
         self.init_ui()
 
@@ -72,14 +77,33 @@ class MainWindow(qt.QMainWindow):
         self.showMaximized()
 
     def browse_file(self):
-        # Open file dialog to select Excel file
-        file_path, _ = qt.QFileDialog.getOpenFileName(
-            self, "Select Excel file", "", "Excel Files (*.xlsx)"
-        )
+        file_path, _ = QFileDialog.getOpenFileName(
+        self,
+        "Select Excel file",
+        filter="Excel Files (*.xlsx)"
+    )
 
-        if file_path:
-            self.import_path_label.setText(file_path)
-        # TODO: Add file handling and data processing here
+        if not file_path:
+            return
+
+    # Validate using validators.py
+        if not is_valid_excel(file_path):
+            QMessageBox.warning(
+            self,
+            "Invalid file",
+            "Only .xlsx files are supported."
+        )
+            return
+
+    # Let the GUI display the chosen file
+        self.import_path_label.setText(file_path)
+
+    # Load using data_handler
+        try:
+            self.loaded_data = DataHandler.load_excel(file_path)
+        except Exception as e:
+            QMessageBox.critical(self, "Read Error", f"Failed to load file:\n{e}")
+        return
 
     def show_help_dialog(self):
         """Show help in a dialog window"""
