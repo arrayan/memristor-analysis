@@ -2,7 +2,7 @@ import sys
 import PySide6.QtWidgets as qt
 from PySide6.QtGui import QAction
 from PySide6.QtCore import Qt
-from GUI.graph_section import GraphSection
+from .graph_section import GraphSection
 
 
 class MainWindow(qt.QMainWindow):
