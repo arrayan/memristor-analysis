@@ -82,7 +82,7 @@ def convert_excel_to_duckdb(
     print(f"Reading Excel file: {excel_path}")
     start_time = time.time()
 
-    # Open the Excel file with fastexcel (Rust-based, very fast)
+    # Open the Excel file with fastexcel
     excel_file = fastexcel.read_excel(excel_path)
     sheet_names = excel_file.sheet_names
 
@@ -174,7 +174,7 @@ def convert_excel_to_duckdb(
         except Exception as e:
             print(f"  Warning: Could not process sheet '{sheet_name}': {e}")
 
-    # Create useful views for analysis
+    # Create views for analysis
     conn.execute("""
         CREATE OR REPLACE VIEW cycle_summary AS
         SELECT 
