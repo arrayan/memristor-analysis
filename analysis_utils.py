@@ -86,7 +86,6 @@ def get_resistance_states(
     db_path: Optional[Path] = None
 ) -> pl.DataFrame:
     """Extract high and low resistance state values per cycle."""
-    where = f"WHERE source_file = '{source_file}'" if source_file else ""
     filter_clause = f"AND source_file = '{source_file}'" if source_file else ""
 
     return query(f"""
