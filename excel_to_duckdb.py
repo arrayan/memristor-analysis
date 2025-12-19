@@ -16,6 +16,34 @@ from typing import Optional
 from concurrent.futures import ProcessPoolExecutor, as_completed
 import multiprocessing
 import glob
+import re
+
+
+def sanitize_table_name(name: str) -> str:
+    """
+    Sanitize a string to be a valid SQL table name.
+
+    - Replaces spaces and hyphens with underscores
+    - Removes special characters
+    - Prepends 'tbl_' if name starts with a number
+    - Converts to lowercase
+    """
+    # Convert to lowercase and replace common separators
+    clean = name.lower().strip()
+    clean = clean.replace(" ", "_").replace("-", "_")
+
+    # Remove any character that's not alphanumeric or underscore
+    clean = re.sub(r'[^a-z0-9_]', '', clean)
+
+    # If starts with a number, prepend 'tbl_'
+    if clean and clean[0].isdigit():
+        clean = f"tbl_{clean}"
+
+    # If empty after cleaning, use a default
+    if not clean:
+        clean = "unnamed_table"
+
+    return clean
 
 
 def convert_excel_to_duckdb(
@@ -129,7 +157,7 @@ def convert_excel_to_duckdb(
             # Add source file column
             df = df.with_columns(pl.lit(file_id).alias("source_file"))
 
-            table_name = sheet_name.lower().replace(" ", "_")
+            table_name = sanitize_table_name(sheet_name)
 
             if append:
                 try:
@@ -257,7 +285,7 @@ def _process_single_file(args: tuple) -> tuple[str, pl.DataFrame | None, dict[st
                 clean_cols = {col: col.strip().replace("#", "").replace(" ", "_") for col in df.columns}
                 df = df.rename(clean_cols)
                 df = df.with_columns(pl.lit(file_id).alias("source_file"))
-                table_name = sheet_name.lower().replace(" ", "_")
+                table_name = sanitize_table_name(sheet_name)
                 metadata_dfs[table_name] = df
             except Exception:
                 pass
