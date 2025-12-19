@@ -345,9 +345,9 @@ def batch_convert_excel_to_duckdb(
     if not excel_files:
         raise ValueError(f"No Excel files found matching pattern: {input_pattern}")
 
-    print(f"=" * 60)
+    print("=" * 60)
     print(f"BATCH PROCESSING: {len(excel_files)} Excel files")
-    print(f"=" * 60)
+    print("=" * 60)
 
     total_start = time.time()
 
@@ -461,7 +461,7 @@ def batch_convert_excel_to_duckdb(
     total_elapsed = time.time() - total_start
 
     print(f"\n{'=' * 60}")
-    print(f"BATCH PROCESSING COMPLETE")
+    print("BATCH PROCESSING COMPLETE")
     print(f"{'=' * 60}")
     print(f"Files processed: {len(excel_files)}")
     print(f"Total time: {total_elapsed:.2f} seconds")
