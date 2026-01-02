@@ -187,25 +187,35 @@ classic = cdf_conn.execute(
 ).df()
 
 vreset = []
+ireset = []
 for s in sets:
     df_s = data[s]
-    # V_reset: AV at Position max|AI|
+    # V_reset: AV at max|AI|
     vreset_s = (df_s.groupby("cycle_number")[["AV", "AI"]]
                     .apply(lambda g: g.loc[g["AI"].abs().idxmax(), "AV"],
                            include_groups=False)
                     .reset_index(name="V_reset"))
     vreset_s["source_file"] = s
     vreset.append(vreset_s)
+    
+    # I_reset_max: max|AI|
+    ireset_s = (df_s.groupby("cycle_number")["AI"]
+                    .apply(lambda x: x.abs().max())
+                    .reset_index(name="I_reset_max"))
+    ireset_s["source_file"] = s
+    ireset.append(ireset_s)
 
 vreset_df = pd.concat(vreset, ignore_index=True)
-cdf_full = classic.merge(vreset_df, on=["source_file", "cycle_number"], how="left")
+ireset_df = pd.concat(ireset, ignore_index=True)
+cdf_full = classic.merge(vreset_df, on=["source_file", "cycle_number"], how="left").merge(ireset_df, on=["source_file", "cycle_number"], how="left")
 
 #parameter mapping + scaling
 param_map = {
     "VSET":    {"pretty": "V_set (V)",   "scale": "linear"},
     "R_LRS":   {"pretty": "R_LRS (Ω)",   "scale": "log"},
     "R_HRS":   {"pretty": "R_HRS (Ω)",   "scale": "log"},
-    "V_reset": {"pretty": "V_reset (V)", "scale": "linear"}
+    "V_reset": {"pretty": "V_reset (V)", "scale": "linear"},
+    "I_reset_max": {"pretty": "I_reset_max (A)", "scale": "log"}
 }
 set_colors = px.colors.sample_colorscale("Viridis", len(sets))
 
@@ -308,6 +318,7 @@ classic_box = box_conn.execute(
 ).df()
 
 vreset_box = []
+ireset_box = []
 for s in sets:
     df_s = data[s]
     vreset_s = (df_s.groupby("cycle_number")[["AV", "AI"]]
@@ -316,16 +327,26 @@ for s in sets:
                     .reset_index(name="V_reset"))
     vreset_s["source_file"] = s
     vreset_box.append(vreset_s)
-vreset_box_df = pd.concat(vreset_box, ignore_index=True)
 
-box_data = classic_box.merge(vreset_box_df, on=["source_file", "cycle_number"], how="left")
+    # I_reset_max: max|AI|
+    ireset_s = (df_s.groupby("cycle_number")["AI"]
+                    .apply(lambda x: x.abs().max())
+                    .reset_index(name="I_reset_max"))
+    ireset_s["source_file"] = s
+    ireset_box.append(ireset_s)
+
+vreset_box_df = pd.concat(vreset_box, ignore_index=True)
+ireset_box_df = pd.concat(ireset_box, ignore_index=True)
+
+box_data = classic_box.merge(vreset_box_df, on=["source_file", "cycle_number"], how="left").merge(ireset_box_df, on=["source_file", "cycle_number"], how="left")
 
 #parameter mapping + scaling
 param_map = {
     "V_set":   {"pretty": "V_set (V)",   "scale": "linear"},
     "V_reset": {"pretty": "V_reset (V)", "scale": "linear"},
     "R_LRS":   {"pretty": "R_LRS (Ω)",   "scale": "log"},
-    "R_HRS":   {"pretty": "R_HRS (Ω)",   "scale": "log"}
+    "R_HRS":   {"pretty": "R_HRS (Ω)",   "scale": "log"},
+    "I_reset_max": {"pretty": "I_reset_max (A)", "scale": "log"}
 }
 
 #boxplots
