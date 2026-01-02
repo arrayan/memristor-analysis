@@ -6,18 +6,19 @@ import pandas as pd
 from pathlib import Path
 
 # ------------------------------------------------------------------
-# 1) DuckDB
+# 1) DuckDB + set list
 # ------------------------------------------------------------------
 DB_FILE = Path(r"C:\Users\apesc\OneDrive\Dokumente\TU_SEM1\MEMRISTOR"
                r"\memristor-analysis-MEM-45-ExcelParse\memristor_data.duckdb")
 conn = duckdb.connect(str(DB_FILE))
 
+#discover endurance set files
 sets = sorted([r[0] for r in conn.execute(
     "SELECT DISTINCT source_file FROM cycles WHERE source_file LIKE '%endurance set'"
 ).fetchall()])
 
 # ------------------------------------------------------------------
-# 2) Cache DataFrames pro Set
+# 2) Cache DataFrames (AI / NORM_COND)
 # ------------------------------------------------------------------
 data = {}
 for s in sets:
@@ -30,8 +31,9 @@ for s in sets:
 conn.close()
 
 # ------------------------------------------------------------------
-# 3) Figures – Double-Dropdown AI / NORM_COND
+# 3) Figure – AI / NORM_COND vs AV
 # ------------------------------------------------------------------
+#skeleton figure
 fig = go.Figure()
 
 colors = {}
@@ -42,7 +44,7 @@ for s in sets:
 trace_map = []   # helps to track which trace is which
 y_label_map = {"AI": "AI (A)", "NORM_COND": "NORM_COND (S)"}
 
-#prepare traces
+#prep traces
 for y_col in ["AI", "NORM_COND"]:
     for s in sets:
         df = data[s]
@@ -63,28 +65,22 @@ for y_col in ["AI", "NORM_COND"]:
             )
             trace_map.append({"set": s, "y": y_col})
 
-# ------------------------------------------------------------------
-# 4) Visibility: Standard-Traces
-# ------------------------------------------------------------------
-# Standard:  AI + first Set
+#default visibility
 for tr, info in zip(fig.data, trace_map):
     tr.visible = (info["y"] == "AI") and (info["set"] == sets[0])
 
-# ------------------------------------------------------------------
-# 5) Helpers Dropdowns
-# ------------------------------------------------------------------
-
+#helper - visibility mask
 def build_vis(y_val, set_val):
     return [tr.meta["y"] == y_val and tr.meta["set"] == set_val for tr in fig.data]
 
+#axis template
 norm_min = min(df["NORM_COND"].min() for df in data.values())
 norm_max = max(df["NORM_COND"].max() for df in data.values())
 norm_min = 0 if norm_min < 0 else norm_min
 norm_max = np.ceil(norm_max / 5) * 5 
 
-y_buttons, set_buttons = [], []
+y_buttons, set_buttons = [], [] #lists for dropdowns
 
-# ------- Y-AXIS-KONFIGURATION ----------
 yaxis_ai = dict(
     type="log",
     tickmode="array",
@@ -100,7 +96,6 @@ yaxis_norm = dict(
     range=[norm_min, norm_max],
     title="NORM_COND (S)"
 )
-# -------------------------------------------
 
 for y_col in ["AI", "NORM_COND"]:
     visible = build_vis(y_col, sets[0])
@@ -125,11 +120,8 @@ for s in sets:
                     "title": f"{s} – {y_label_map[current_y]}"}])
     )
 
-# ------------------------------------------------------------------
-# 6) Axis – dynamic for NORM_COND
-# ------------------------------------------------------------------
+#final layout tweaks
 fig.update_xaxes(autorange="reversed", title="AV (V)")
-
 dticks = 10.**np.arange(-12, -5)
 fig.update_yaxes(
     type="log",
@@ -143,7 +135,6 @@ fig.update_yaxes(
 # Min/Max for all Sets
 norm_min = min(df["NORM_COND"].min() for df in data.values())
 norm_max = max(df["NORM_COND"].max() for df in data.values())
-# hübsche Ränder
 norm_min = 0 if norm_min < 0 else norm_min
 norm_max = np.ceil(norm_max / 5) * 5  # sum up to next 5
 
@@ -159,9 +150,7 @@ for btn in y_buttons:
         )
         break
 
-# ------------------------------------------------------------------
-# 7) Layout with both Dropdowns
-# ------------------------------------------------------------------
+#add dropdowns
 fig.update_layout(
     updatemenus=[
         dict(buttons=y_buttons, direction="down", showactive=True,
@@ -173,22 +162,17 @@ fig.update_layout(
     width=900, height=600
 )
 
-# ------------------------------------------------------------------
-# 8) Output
-# ------------------------------------------------------------------
+#output
 html_out = DB_FILE.with_name("endurance_set_double_picker_final.html")
 fig.write_html(html_out)
 print(f"Fertig → {html_out}")
 fig.show()
 
 # ==================================================================
-# 9) CDF – DOUBLE-DROPDOWN
-#    ├─ Param (V_set, R_LRS, R_HRS, V_reset)
-#    └─ Set   (only endurance set files)
+# 4) CDF PLOTS – V_set, R_LRS, R_HRS, V_reset
 # ==================================================================
+#reuse cached data
 cdf_conn = duckdb.connect(str(DB_FILE))
-
-# 1. Parameters from cycle_summary
 classic = cdf_conn.execute(
     "SELECT source_file, cycle_number, "
     "MAX(VSET)  as VSET, "
@@ -200,7 +184,6 @@ classic = cdf_conn.execute(
     "ORDER BY source_file, cycle_number"
 ).df()
 
-# 2. V_reset per cycle (on-the-fly)
 vreset = []
 for s in sets:
     df_s = data[s]
@@ -213,11 +196,9 @@ for s in sets:
     vreset.append(vreset_s)
 
 vreset_df = pd.concat(vreset, ignore_index=True)
-
-# 3. Full DataFrame
 cdf_full = classic.merge(vreset_df, on=["source_file", "cycle_number"], how="left")
 
-# 4. Mapping + Scaling
+#parameter mapping + scaling
 param_map = {
     "VSET":    {"pretty": "V_set (V)",   "scale": "linear"},
     "R_LRS":   {"pretty": "R_LRS (Ω)",   "scale": "log"},
@@ -252,11 +233,11 @@ for param, info in param_map.items():
             )
         )
 
-# 6. Dropdowns
+#helper - visibility mask
 def build_vis(param, set_val):
     return [tr.meta["param"] == param and tr.meta["set"] == set_val for tr in cdf_fig.data]
 
-# 6a. Param-Buttons
+# dropdowns + buttons
 param_buttons = []
 for param, info in param_map.items():
     visible = build_vis(param, first_set)
@@ -270,7 +251,6 @@ for param, info in param_map.items():
                     "title": f"CDF – {info['pretty']} ({first_set})"}])
     )
 
-# 6b. Set-Buttons
 set_buttons = []
 for s in sets:
     current_param = next(tr.meta["param"] for tr in cdf_fig.data if tr.visible)
@@ -286,7 +266,7 @@ for s in sets:
                     "title": f"CDF – {info['pretty']} ({s})"}])
     )
 
-# 7. Layout
+#Layout
 cdf_fig.update_layout(
     updatemenus=[
         dict(buttons=param_buttons, direction="down", showactive=True,
@@ -309,12 +289,11 @@ print(f"CDF → {cdf_html}")
 cdf_conn.close()
 
 # ==================================================================
-# 12) BOXPLOTS – V_set, V_reset, R_LRS, R_HRS
-#     (Dropdown per param, [Min, Q1, Median, Q3, Max], no fences, no points)
+# 5) BOXPLOTS – V_set, V_reset, R_LRS, R_HRS
 # ==================================================================
+#reuse cached data
 box_conn = duckdb.connect(str(DB_FILE))
 
-# 1. DataFrame
 classic_box = box_conn.execute(
     "SELECT source_file, cycle_number, "
     "MAX(VSET)  as V_set, "
@@ -326,7 +305,6 @@ classic_box = box_conn.execute(
     "ORDER BY source_file, cycle_number"
 ).df()
 
-# V_reset on-the-fly
 vreset_box = []
 for s in sets:
     df_s = data[s]
@@ -340,7 +318,7 @@ vreset_box_df = pd.concat(vreset_box, ignore_index=True)
 
 box_data = classic_box.merge(vreset_box_df, on=["source_file", "cycle_number"], how="left")
 
-# 2. Mapping + Scaling
+#parameter mapping + scaling
 param_map = {
     "V_set":   {"pretty": "V_set (V)",   "scale": "linear"},
     "V_reset": {"pretty": "V_reset (V)", "scale": "linear"},
@@ -348,7 +326,7 @@ param_map = {
     "R_HRS":   {"pretty": "R_HRS (Ω)",   "scale": "log"}
 }
 
-# 3. Figures
+#boxplots
 box_fig = go.Figure()
 first_param = "V_set"
 set_cols = px.colors.sample_colorscale("Viridis", len(sets))
@@ -403,7 +381,7 @@ for param, info in param_map.items():
 #box_fig.add_traces(stats_traces)
 
 
-# 5. Dropdown
+#dropdown
 buttons = []
 for param, info in param_map.items():
     visible = [tr.meta["param"] == param for tr in box_fig.data]
@@ -416,7 +394,7 @@ for param, info in param_map.items():
                     "title": f"Boxplot – {info['pretty']}"}])
     )
 
-# 6. Layout
+#layout
 box_fig.update_layout(
     updatemenus=[dict(buttons=buttons, direction="down", showactive=True,
                       x=1.02, xanchor="left", y=1.15, yanchor="top")],
@@ -433,7 +411,7 @@ print(f"Boxplots → {box_html}")
 box_conn.close()
 
 # ==================================================================
-# 13) ENDURANCE – Performance Parameter vs. Cycle Number
+# 6) ENDURANCE – Performance Parameter vs. Cycle Number
 # ==================================================================
 end_conn = duckdb.connect(str(DB_FILE))
 
@@ -471,7 +449,7 @@ for s in sets:
 
 end_df = pd.concat(end_data, ignore_index=True)
 
-# 2. Mapping + Scaling
+#parameter mapping + scaling
 param_map = {
     "R_LRS":        {"pretty": "R_LRS (Ω)",        "scale": "log"},
     "R_HRS":        {"pretty": "R_HRS (Ω)",        "scale": "log"},
@@ -481,7 +459,7 @@ param_map = {
     "Memory_window": {"pretty": "Memory Window",   "scale": "log"}
 }
 
-# 3. Figures
+#add traces for figure
 end_fig = go.Figure()
 first_param = "R_LRS"
 set_cols = px.colors.sample_colorscale("Viridis", len(sets))
@@ -505,7 +483,7 @@ for param, info in param_map.items():
             )
         )
 
-# 4. Dropdown
+#dropdown
 buttons = []
 for param, info in param_map.items():
     visible = [tr.meta["param"] == param for tr in end_fig.data]
@@ -519,7 +497,7 @@ for param, info in param_map.items():
                     "title": f"Endurance – {info['pretty']}"}])
     )
 
-# 5. Layout
+#Layout
 end_fig.update_layout(
     updatemenus=[dict(buttons=buttons, direction="down", showactive=True,
                       x=1.02, xanchor="left", y=1.15, yanchor="top")],
@@ -534,3 +512,11 @@ end_html = DB_FILE.with_name("endurance_performance.html")
 end_fig.write_html(end_html)
 print(f"Endurance → {end_html}")
 end_conn.close()
+
+# ==================================================================
+# 7) File Summary
+# ==================================================================
+#endurance_set_double_picker_final.html
+#endurance_cdf.html
+#endurance_boxplots.html
+#endurance_performance.html
