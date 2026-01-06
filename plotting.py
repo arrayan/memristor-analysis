@@ -165,7 +165,7 @@ fig.update_layout(
 )
 
 #output
-html_out = DB_FILE.with_name("endurance_set_double_picker_final.html")
+html_out = DB_FILE.with_name("characteristic_plots.html")
 fig.write_html(html_out)
 print(f"Fertig → {html_out}")
 fig.show()
@@ -175,6 +175,16 @@ fig.show()
 # ==================================================================
 #reuse cached data
 cdf_conn = duckdb.connect(str(DB_FILE))
+
+forming_df = cdf_conn.execute(
+    "SELECT MAX(VFORM) as V_forming_global "
+    "FROM cycles "
+    "WHERE source_file LIKE '%Electroforming%' "
+).df()
+
+V_forming_global = forming_df["V_forming_global"].iloc[0] if not forming_df.empty else None
+#print("Globale V_forming:", V_forming_global)
+
 classic = cdf_conn.execute(
     "SELECT source_file, cycle_number, "
     "MAX(VSET)  as VSET, "
@@ -208,10 +218,12 @@ for s in sets:
 vreset_df = pd.concat(vreset, ignore_index=True)
 ireset_df = pd.concat(ireset, ignore_index=True)
 cdf_full = classic.merge(vreset_df, on=["source_file", "cycle_number"], how="left").merge(ireset_df, on=["source_file", "cycle_number"], how="left")
+cdf_full["V_forming"] = V_forming_global
 
 #parameter mapping + scaling
 param_map = {
     "VSET":    {"pretty": "V_set (V)",   "scale": "linear"},
+    "V_forming": {"pretty": "V_forming (V)", "scale": "linear"},
     "R_LRS":   {"pretty": "R_LRS (Ω)",   "scale": "log"},
     "R_HRS":   {"pretty": "R_HRS (Ω)",   "scale": "log"},
     "V_reset": {"pretty": "V_reset (V)", "scale": "linear"},
@@ -306,6 +318,15 @@ cdf_conn.close()
 #reuse cached data
 box_conn = duckdb.connect(str(DB_FILE))
 
+forming_df = box_conn.execute(
+    "SELECT MAX(VFORM) as V_forming_global "
+    "FROM cycles "
+    "WHERE source_file LIKE '%Electroforming%' "
+).df()
+
+V_forming_global = forming_df["V_forming_global"].iloc[0] if not forming_df.empty else None
+#print("Globale V_forming:", V_forming_global)
+
 classic_box = box_conn.execute(
     "SELECT source_file, cycle_number, "
     "MAX(VSET)  as V_set, "
@@ -339,10 +360,12 @@ vreset_box_df = pd.concat(vreset_box, ignore_index=True)
 ireset_box_df = pd.concat(ireset_box, ignore_index=True)
 
 box_data = classic_box.merge(vreset_box_df, on=["source_file", "cycle_number"], how="left").merge(ireset_box_df, on=["source_file", "cycle_number"], how="left")
+box_data["V_forming"] = V_forming_global
 
 #parameter mapping + scaling
 param_map = {
     "V_set":   {"pretty": "V_set (V)",   "scale": "linear"},
+    "V_forming": {"pretty": "V_forming (V)", "scale": "linear"},
     "V_reset": {"pretty": "V_reset (V)", "scale": "linear"},
     "R_LRS":   {"pretty": "R_LRS (Ω)",   "scale": "log"},
     "R_HRS":   {"pretty": "R_HRS (Ω)",   "scale": "log"},
@@ -438,7 +461,7 @@ box_conn.close()
 # ==================================================================
 end_conn = duckdb.connect(str(DB_FILE))
 
-# 1. DataFrame per Set
+#DataFrame per Set
 raw_data = {}
 for s in sets:
     raw_data[s] = end_conn.execute(
@@ -454,6 +477,8 @@ for s in sets:
     # max-values per cycle
     classic = (df_s.groupby("cycle_number")
                    .agg(V_set=("VSET", "max"),
+                        I_LRS=("ILRS", "last"),
+                        I_HRS=("IHRS", "last"),
                         R_LRS=("ILRS", "max"),
                         R_HRS=("IHRS", "max"),
                         I_reset_max=("AI", lambda x: x.abs().max()))
@@ -469,7 +494,7 @@ for s in sets:
     cycle_df["source_file"] = s
     cycle_df["Memory_window"] = cycle_df["R_HRS"] / cycle_df["R_LRS"]
     end_data.append(cycle_df)
-
+    
 end_df = pd.concat(end_data, ignore_index=True)
 
 #parameter mapping + scaling
@@ -537,9 +562,104 @@ print(f"Endurance → {end_html}")
 end_conn.close()
 
 # ==================================================================
-# 7) File Summary
+# 7) DEVICE-LEVEL CORRELATION SCATTER PLOTS
+#     Pairs: I_HRS vs V_set, R_HRS vs V_set, I_LRS vs V_reset,
+#            R_LRS vs V_reset, I_reset_max vs V_reset, V_set vs V_reset
 # ==================================================================
-#endurance_set_double_picker_final.html
+corr_scatter_conn = duckdb.connect(str(DB_FILE))
+
+scatter_df = (end_df[["source_file", "cycle_number",
+                      "V_set", "V_reset", "I_HRS", "I_LRS", "I_reset_max"]]
+              .copy())
+
+#good chances that this is redundant, but just to be sure - I struggled with this way too long for no reason
+scatter_df["I_HRS"] = scatter_df["I_HRS"]
+scatter_df["I_LRS"] = scatter_df["I_LRS"]
+scatter_df["R_HRS"] = scatter_df["V_set"] / scatter_df["I_HRS"].abs()
+scatter_df["R_LRS"] = scatter_df["V_set"] / scatter_df["I_LRS"].abs()
+
+#select pairs
+pairs = [
+    ("I_HRS", "V_set", "I_HRS (A) vs V_set (V)"),
+    ("R_HRS", "V_set", "R_HRS (Ω) vs V_set (V)"),
+    ("I_LRS", "V_reset", "I_LRS (A) vs V_reset (V)"),
+    ("R_LRS", "V_reset", "R_LRS (Ω) vs V_reset (V)"),
+    ("I_reset_max", "V_reset", "I_reset_max (A) vs V_reset (V)"),
+    ("V_set", "V_reset", "V_set (V) vs V_reset (V)")
+]
+
+#figure + traces
+fig_scatter = go.Figure()
+first_pair = pairs[0]
+first_set = sets[0]
+set_cols = px.colors.sample_colorscale("Viridis", len(sets))
+color_map = {s: col for s, col in zip(sets, set_cols)}
+
+for x_col, y_col, title in pairs:
+    for s in sets:
+        df = scatter_df[scatter_df["source_file"] == s]
+        if df.empty:
+            continue
+        fig_scatter.add_trace(
+            go.Scatter(
+                x=df[x_col],
+                y=df[y_col],
+                mode="markers",
+                marker=dict(color=color_map[s], size=6),
+                name=s,
+                showlegend=(x_col, y_col) == first_pair,
+                visible=((x_col, y_col) == first_pair and s == first_set),
+                meta={"set": s, "x": x_col, "y": y_col},
+                hovertemplate=f"{x_col}: %{{x:.2e}}<br>{y_col}: %{{y:.2e}}<extra></extra>"
+            )
+        )
+
+# helper - visibility mask
+def vis(set_name, x_y):
+    return [tr.meta["set"] == set_name and tr.meta["x"] == x_y[0] and tr.meta["y"] == x_y[1] for tr in fig_scatter.data]
+
+pair_buttons, set_buttons = [], []
+
+# dropdowns + buttons
+for x_col, y_col, title in pairs:
+    visible = [tr.meta["x"] == x_col and tr.meta["y"] == y_col for tr in fig_scatter.data]
+    pair_buttons.append(
+        dict(label=title,
+             method="update",
+             args=[{"visible": visible},
+                   {"xaxis.title.text": x_col,
+                    "yaxis.title.text": y_col,
+                    "title": f"{title} – {first_set}"}])
+    )
+
+for s in sets:
+    visible = [tr.meta["set"] == s and tr.meta["x"] == fig_scatter.layout.xaxis.title.text for tr in fig_scatter.data]
+    set_buttons.append(
+        dict(label=s,
+             method="update",
+             args=[{"visible": visible},
+                   {"title": f"{fig_scatter.layout.xaxis.title.text} vs {fig_scatter.layout.yaxis.title.text} - {s}"}])
+    )
+
+fig_scatter.update_layout(
+    updatemenus=[
+        dict(buttons=pair_buttons, direction="down", x=1.02, y=1.15, xanchor="left", yanchor="top"),
+        #dict(buttons=set_buttons, direction="down", x=1.02, y=1.05, xanchor="left", yanchor="top")
+    ],
+    title=f"{first_pair[2]} – {first_set}",
+    width=900, height=600
+)
+
+#output
+html_scatter = DB_FILE.with_name("device_correlation_scatter.html")
+fig_scatter.write_html(html_scatter)
+print("Device scatter →", html_scatter)
+corr_scatter_conn.close()
+
+# ==================================================================
+# 8) File Summary
+# ==================================================================
+#characteristic_plots.html
 #endurance_cdf.html
 #endurance_boxplots.html
 #endurance_performance.html
