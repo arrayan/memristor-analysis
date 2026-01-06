@@ -174,24 +174,25 @@ def convert_excel_to_duckdb(
         except Exception as e:
             print(f"  Warning: Could not process sheet '{sheet_name}': {e}")
 
-    # Create views for analysis
-    conn.execute("""
-        CREATE OR REPLACE VIEW cycle_summary AS
-        SELECT 
-            source_file,
-            cycle_number,
-            COUNT(*) as measurement_count,
-            MIN(Time) as start_time,
-            MAX(Time) as end_time,
-            AVG(I) as avg_current,
-            MAX(ABS(I)) as max_abs_current,
-            MIN(AV) as min_voltage,
-            MAX(AV) as max_voltage
-        FROM cycles
-        GROUP BY source_file, cycle_number
-        ORDER BY source_file, cycle_number
-    """)
-    print("Created 'cycle_summary' view")
+    # Create views for analysis only if cycles table exists (in case the sheet has no run(s))
+    if all_cycles:
+        conn.execute("""
+            CREATE OR REPLACE VIEW cycle_summary AS
+            SELECT 
+                source_file,
+                cycle_number,
+                COUNT(*) as measurement_count,
+                MIN(Time) as start_time,
+                MAX(Time) as end_time,
+                AVG(I) as avg_current,
+                MAX(ABS(I)) as max_abs_current,
+                MIN(AV) as min_voltage,
+                MAX(AV) as max_voltage
+            FROM cycles
+            GROUP BY source_file, cycle_number
+            ORDER BY source_file, cycle_number
+        """)
+        print("Created 'cycle_summary' view")
 
     # Close connection
     conn.close()
@@ -408,13 +409,46 @@ def batch_convert_excel_to_duckdb(
 
     conn = duckdb.connect(str(db_path))
 
-    # Write cycles table
+    # Write cycles table and create views (only if cycles exist)
     if all_cycles:
         combined_cycles = pl.concat(all_cycles, how="diagonal")
         conn.execute("DROP TABLE IF EXISTS cycles")
         conn.execute("CREATE TABLE cycles AS SELECT * FROM combined_cycles")
         total_rows = conn.execute("SELECT COUNT(*) FROM cycles").fetchone()[0]
         print(f"Created 'cycles' table with {total_rows:,} total rows")
+
+        # Create views
+        conn.execute("""
+            CREATE OR REPLACE VIEW cycle_summary AS
+            SELECT 
+                source_file,
+                cycle_number,
+                COUNT(*) as measurement_count,
+                MIN(Time) as start_time,
+                MAX(Time) as end_time,
+                AVG(I) as avg_current,
+                MAX(ABS(I)) as max_abs_current,
+                MIN(AV) as min_voltage,
+                MAX(AV) as max_voltage
+            FROM cycles
+            GROUP BY source_file, cycle_number
+            ORDER BY source_file, cycle_number
+        """)
+
+        # Create file summary view
+        conn.execute("""
+            CREATE OR REPLACE VIEW file_summary AS
+            SELECT 
+                source_file,
+                COUNT(DISTINCT cycle_number) as num_cycles,
+                COUNT(*) as total_measurements,
+                MIN(cycle_number) as first_cycle,
+                MAX(cycle_number) as last_cycle
+            FROM cycles
+            GROUP BY source_file
+            ORDER BY source_file
+        """)
+        print("Created 'cycle_summary' and 'file_summary' views")
 
     # Write metadata tables
     for table_name, dfs in all_metadata.items():
@@ -423,38 +457,6 @@ def batch_convert_excel_to_duckdb(
         conn.execute(f"CREATE TABLE {table_name} AS SELECT * FROM combined_df")
         row_count = conn.execute(f"SELECT COUNT(*) FROM {table_name}").fetchone()[0]
         print(f"Created '{table_name}' table with {row_count:,} rows")
-
-    # Create views
-    conn.execute("""
-        CREATE OR REPLACE VIEW cycle_summary AS
-        SELECT 
-            source_file,
-            cycle_number,
-            COUNT(*) as measurement_count,
-            MIN(Time) as start_time,
-            MAX(Time) as end_time,
-            AVG(I) as avg_current,
-            MAX(ABS(I)) as max_abs_current,
-            MIN(AV) as min_voltage,
-            MAX(AV) as max_voltage
-        FROM cycles
-        GROUP BY source_file, cycle_number
-        ORDER BY source_file, cycle_number
-    """)
-
-    # Create file summary view
-    conn.execute("""
-        CREATE OR REPLACE VIEW file_summary AS
-        SELECT 
-            source_file,
-            COUNT(DISTINCT cycle_number) as num_cycles,
-            COUNT(*) as total_measurements,
-            MIN(cycle_number) as first_cycle,
-            MAX(cycle_number) as last_cycle
-        FROM cycles
-        GROUP BY source_file
-        ORDER BY source_file
-    """)
 
     conn.close()
 
