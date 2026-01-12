@@ -33,7 +33,7 @@ def sanitize_table_name(name: str) -> str:
     clean = clean.replace(" ", "_").replace("-", "_")
 
     # Remove any character that's not alphanumeric or underscore
-    clean = re.sub(r'[^a-z0-9_]', '', clean)
+    clean = re.sub(r"[^a-z0-9_]", "", clean)
 
     # If starts with a number, prepend 'tbl_'
     if clean and clean[0].isdigit():
@@ -86,16 +86,24 @@ def convert_excel_to_duckdb(
     excel_file = fastexcel.read_excel(excel_path)
     sheet_names = excel_file.sheet_names
 
-    print(f"Found {len(sheet_names)} sheets: {sheet_names[:5]}{'...' if len(sheet_names) > 5 else ''}")
+    print(
+        f"Found {len(sheet_names)} sheets: {sheet_names[:5]}{'...' if len(sheet_names) > 5 else ''}"
+    )
 
     # Connect to DuckDB (creates file if doesn't exist)
     conn = duckdb.connect(str(db_path))
 
     # Separate run sheets from metadata sheets
-    run_sheets = [s for s in sheet_names if s.startswith("Run") and s not in exclude_sheets]
-    metadata_sheets = [s for s in sheet_names if not s.startswith("Run") and s not in exclude_sheets]
+    run_sheets = [
+        s for s in sheet_names if s.startswith("Run") and s not in exclude_sheets
+    ]
+    metadata_sheets = [
+        s for s in sheet_names if not s.startswith("Run") and s not in exclude_sheets
+    ]
 
-    print(f"Processing {len(run_sheets)} run sheets and {len(metadata_sheets)} metadata sheets")
+    print(
+        f"Processing {len(run_sheets)} run sheets and {len(metadata_sheets)} metadata sheets"
+    )
 
     # Process run sheets (cycle data)
     all_cycles = []
@@ -108,27 +116,32 @@ def convert_excel_to_duckdb(
             df = excel_file.load_sheet_by_name(sheet_name).to_polars()
 
             # Add cycle identifier and file source columns
-            df = df.with_columns([
-                pl.lit(cycle_num).alias("cycle_number"),
-                pl.lit(file_id).alias("source_file"),
-            ])
+            df = df.with_columns(
+                [
+                    pl.lit(cycle_num).alias("cycle_number"),
+                    pl.lit(file_id).alias("source_file"),
+                ]
+            )
 
             # Clean column names (remove any special characters)
-            clean_cols = {col: col.strip().replace("#", "").replace(" ", "_") for col in df.columns}
+            clean_cols = {
+                col: col.strip().replace("#", "").replace(" ", "_")
+                for col in df.columns
+            }
             df = df.rename(clean_cols)
-            
+
             # Handle NORM_COND column if present
             if "NORM_COND" in df.columns:
                 df = df.with_columns(
                     pl.col("NORM_COND")
-                        .str.strip_chars()
-                        .str.replace_all(r"(?i)#REF", "")
-                        .str.replace(",", ".")
-                        .replace("", None)
-                        .str.strip_chars()
-                        .cast(pl.Float64, strict=False)
-                        .alias("NORM_COND")
-            )
+                    .str.strip_chars()
+                    .str.replace_all(r"(?i)#REF", "")
+                    .str.replace(",", ".")
+                    .replace("", None)
+                    .str.strip_chars()
+                    .cast(pl.Float64, strict=False)
+                    .alias("NORM_COND")
+                )
 
             all_cycles.append(df)
 
@@ -164,7 +177,10 @@ def convert_excel_to_duckdb(
             df = excel_file.load_sheet_by_name(sheet_name).to_polars()
 
             # Clean column names
-            clean_cols = {col: col.strip().replace("#", "").replace(" ", "_") for col in df.columns}
+            clean_cols = {
+                col: col.strip().replace("#", "").replace(" ", "_")
+                for col in df.columns
+            }
             df = df.rename(clean_cols)
 
             # Add source file column
@@ -216,7 +232,9 @@ def convert_excel_to_duckdb(
     return db_path
 
 
-def export_to_parquet(db_path: str | Path, output_dir: str | Path = "parquet_data") -> Path:
+def export_to_parquet(
+    db_path: str | Path, output_dir: str | Path = "parquet_data"
+) -> Path:
     """
     Export DuckDB tables to Parquet files for even faster analysis.
 
@@ -238,7 +256,9 @@ def export_to_parquet(db_path: str | Path, output_dir: str | Path = "parquet_dat
 
     for (table_name,) in tables:
         output_file = output_dir / f"{table_name}.parquet"
-        conn.execute(f"COPY {table_name} TO '{output_file}' (FORMAT PARQUET, COMPRESSION ZSTD)")
+        conn.execute(
+            f"COPY {table_name} TO '{output_file}' (FORMAT PARQUET, COMPRESSION ZSTD)"
+        )
         print(f"Exported {table_name} to {output_file}")
 
     conn.close()
@@ -247,7 +267,9 @@ def export_to_parquet(db_path: str | Path, output_dir: str | Path = "parquet_dat
     return output_dir
 
 
-def _process_single_file(args: tuple) -> tuple[str, pl.DataFrame | None, dict[str, pl.DataFrame], float]:
+def _process_single_file(
+    args: tuple,
+) -> tuple[str, pl.DataFrame | None, dict[str, pl.DataFrame], float]:
     """
     Process a single Excel file and return DataFrames (for parallel processing).
 
@@ -269,8 +291,14 @@ def _process_single_file(args: tuple) -> tuple[str, pl.DataFrame | None, dict[st
         excel_file = fastexcel.read_excel(excel_path)
         sheet_names = excel_file.sheet_names
 
-        run_sheets = [s for s in sheet_names if s.startswith("Run") and s not in exclude_sheets]
-        metadata_sheets = [s for s in sheet_names if not s.startswith("Run") and s not in exclude_sheets]
+        run_sheets = [
+            s for s in sheet_names if s.startswith("Run") and s not in exclude_sheets
+        ]
+        metadata_sheets = [
+            s
+            for s in sheet_names
+            if not s.startswith("Run") and s not in exclude_sheets
+        ]
 
         # Process run sheets
         all_cycles = []
@@ -278,23 +306,28 @@ def _process_single_file(args: tuple) -> tuple[str, pl.DataFrame | None, dict[st
             try:
                 cycle_num = int(sheet_name.replace("Run", ""))
                 df = excel_file.load_sheet_by_name(sheet_name).to_polars()
-                df = df.with_columns([
-                    pl.lit(cycle_num).alias("cycle_number"),
-                    pl.lit(file_id).alias("source_file"),
-                ])
-                clean_cols = {col: col.strip().replace("#", "").replace(" ", "_") for col in df.columns}
+                df = df.with_columns(
+                    [
+                        pl.lit(cycle_num).alias("cycle_number"),
+                        pl.lit(file_id).alias("source_file"),
+                    ]
+                )
+                clean_cols = {
+                    col: col.strip().replace("#", "").replace(" ", "_")
+                    for col in df.columns
+                }
                 df = df.rename(clean_cols)
                 if "NORM_COND" in df.columns:
                     df = df.with_columns(
                         pl.col("NORM_COND")
-                            .str.strip_chars()
-                            .str.replace_all(r"(?i)#REF", "")
-                            .str.replace(",", ".")
-                            .replace("", None)
-                            .str.strip_chars()                            
-                            .cast(pl.Float64, strict=False)       
-                            .alias("NORM_COND")
-                )
+                        .str.strip_chars()
+                        .str.replace_all(r"(?i)#REF", "")
+                        .str.replace(",", ".")
+                        .replace("", None)
+                        .str.strip_chars()
+                        .cast(pl.Float64, strict=False)
+                        .alias("NORM_COND")
+                    )
                 all_cycles.append(df)
             except Exception:
                 pass
@@ -306,19 +339,22 @@ def _process_single_file(args: tuple) -> tuple[str, pl.DataFrame | None, dict[st
         for sheet_name in metadata_sheets:
             try:
                 df = excel_file.load_sheet_by_name(sheet_name).to_polars()
-                clean_cols = {col: col.strip().replace("#", "").replace(" ", "_") for col in df.columns}
+                clean_cols = {
+                    col: col.strip().replace("#", "").replace(" ", "_")
+                    for col in df.columns
+                }
                 df = df.rename(clean_cols)
                 if "NORM_COND" in df.columns:
                     df = df.with_columns(
                         pl.col("NORM_COND")
-                            .str.strip_chars()
-                            .str.replace_all(r"(?i)#REF", "")
-                            .str.replace(",", ".")
-                            .replace("", None)
-                            .str.strip_chars()                            
-                            .cast(pl.Float64, strict=False)       
-                            .alias("NORM_COND")
-                )
+                        .str.strip_chars()
+                        .str.replace_all(r"(?i)#REF", "")
+                        .str.replace(",", ".")
+                        .replace("", None)
+                        .str.strip_chars()
+                        .cast(pl.Float64, strict=False)
+                        .alias("NORM_COND")
+                    )
                 df = df.with_columns(pl.lit(file_id).alias("source_file"))
                 table_name = sanitize_table_name(sheet_name)
                 metadata_dfs[table_name] = df
@@ -400,7 +436,10 @@ def batch_convert_excel_to_duckdb(
         print(f"Using {max_workers} parallel workers...\n")
 
         with ProcessPoolExecutor(max_workers=max_workers) as executor:
-            futures = {executor.submit(_process_single_file, args): args[0] for args in args_list}
+            futures = {
+                executor.submit(_process_single_file, args): args[0]
+                for args in args_list
+            }
 
             for i, future in enumerate(as_completed(futures), 1):
                 file_path = futures[future]
@@ -416,10 +455,14 @@ def batch_convert_excel_to_duckdb(
                         all_metadata[table_name].append(df)
 
                     rows = len(cycles_df) if cycles_df is not None else 0
-                    print(f"[{i}/{len(excel_files)}] {Path(file_path).name}: {rows:,} rows ({elapsed:.2f}s)")
+                    print(
+                        f"[{i}/{len(excel_files)}] {Path(file_path).name}: {rows:,} rows ({elapsed:.2f}s)"
+                    )
 
                 except Exception as e:
-                    print(f"[{i}/{len(excel_files)}] {Path(file_path).name}: ERROR - {e}")
+                    print(
+                        f"[{i}/{len(excel_files)}] {Path(file_path).name}: ERROR - {e}"
+                    )
     else:
         # Sequential processing
         print("Processing sequentially...\n")
@@ -436,7 +479,9 @@ def batch_convert_excel_to_duckdb(
                 all_metadata[table_name].append(df)
 
             rows = len(cycles_df) if cycles_df is not None else 0
-            print(f"[{i}/{len(excel_files)}] {Path(args[0]).name}: {rows:,} rows ({elapsed:.2f}s)")
+            print(
+                f"[{i}/{len(excel_files)}] {Path(args[0]).name}: {rows:,} rows ({elapsed:.2f}s)"
+            )
 
     # Combine all data and write to DuckDB
     print(f"\nCombining data from {len(excel_files)} files...")
@@ -500,7 +545,7 @@ def batch_convert_excel_to_duckdb(
     print(f"{'=' * 60}")
     print(f"Files processed: {len(excel_files)}")
     print(f"Total time: {total_elapsed:.2f} seconds")
-    print(f"Average time per file: {total_elapsed/len(excel_files):.2f} seconds")
+    print(f"Average time per file: {total_elapsed / len(excel_files):.2f} seconds")
     print(f"Database saved to: {db_path.absolute()}")
 
     return db_path
@@ -521,5 +566,3 @@ def query_db(db_path: str | Path, query: str) -> pl.DataFrame:
     result = conn.execute(query).pl()
     conn.close()
     return result
-
-
