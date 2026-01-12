@@ -154,7 +154,7 @@ def convert_excel_to_duckdb(
     # Combine all cycle data into one dataframe
     if all_cycles:
         print("Combining all cycle data...")
-        pl.concat(all_cycles, how="diagonal")
+        combined_df = pl.concat(all_cycles, how="diagonal")
 
         # Convert to DuckDB table
         if append:
@@ -490,7 +490,7 @@ def batch_convert_excel_to_duckdb(
 
     # Write cycles table
     if all_cycles:
-        pl.concat(all_cycles, how="diagonal")
+        combined_cycles = pl.concat(all_cycles, how="diagonal")
         conn.execute("DROP TABLE IF EXISTS cycles")
         conn.execute("CREATE TABLE cycles AS SELECT * FROM combined_cycles")
         total_rows = conn.execute("SELECT COUNT(*) FROM cycles").fetchone()[0]
@@ -498,7 +498,7 @@ def batch_convert_excel_to_duckdb(
 
     # Write metadata tables
     for table_name, dfs in all_metadata.items():
-        pl.concat(dfs, how="diagonal")
+        combined_df = pl.concat(dfs, how="diagonal")
         conn.execute(f"DROP TABLE IF EXISTS {table_name}")
         conn.execute(f"CREATE TABLE {table_name} AS SELECT * FROM combined_df")
         row_count = conn.execute(f"SELECT COUNT(*) FROM {table_name}").fetchone()[0]
