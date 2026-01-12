@@ -198,12 +198,18 @@ def convert_excel_to_duckdb(
 
             if append:
                 try:
-                    conn.execute(f"INSERT INTO {table_name} SELECT * FROM metadata_df_view")
+                    conn.execute(
+                        f"INSERT INTO {table_name} SELECT * FROM metadata_df_view"
+                    )
                 except duckdb.CatalogException:
-                    conn.execute(f"CREATE TABLE {table_name} AS SELECT * FROM metadata_df_view")
+                    conn.execute(
+                        f"CREATE TABLE {table_name} AS SELECT * FROM metadata_df_view"
+                    )
             else:
                 conn.execute(f"DROP TABLE IF EXISTS {table_name}")
-                conn.execute(f"CREATE TABLE {table_name} AS SELECT * FROM metadata_df_view")
+                conn.execute(
+                    f"CREATE TABLE {table_name} AS SELECT * FROM metadata_df_view"
+                )
 
             conn.unregister("metadata_df_view")
 
@@ -513,7 +519,9 @@ def batch_convert_excel_to_duckdb(
         combined_df = pl.concat(dfs, how="diagonal")
         conn.register("combined_metadata_view", combined_df)
         conn.execute(f"DROP TABLE IF EXISTS {table_name}")
-        conn.execute(f"CREATE TABLE {table_name} AS SELECT * FROM combined_metadata_view")
+        conn.execute(
+            f"CREATE TABLE {table_name} AS SELECT * FROM combined_metadata_view"
+        )
         conn.unregister("combined_metadata_view")
         row_count = conn.execute(f"SELECT COUNT(*) FROM {table_name}").fetchone()[0]
         print(f"Created '{table_name}' table with {row_count:,} rows")
