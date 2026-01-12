@@ -1,5 +1,4 @@
-<<<<<<< HEAD
-=======
+import os
 import duckdb
 import plotly.graph_objects as go
 import plotly.express as px
@@ -10,8 +9,7 @@ from pathlib import Path
 # ------------------------------------------------------------------
 # 1) DuckDB + set list
 # ------------------------------------------------------------------
-DB_FILE = Path(r"C:\Users\apesc\OneDrive\Dokumente\TU_SEM1\MEMRISTOR"
-               r"\memristor-analysis-MEM-45-ExcelParse\memristor_data.duckdb")
+DB_FILE = Path(os.environ["MEMRISTOR_DB"]).expanduser()
 conn = duckdb.connect(str(DB_FILE))
 
 #discover endurance set files
