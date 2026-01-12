@@ -156,17 +156,22 @@ def convert_excel_to_duckdb(
         print("Combining all cycle data...")
         combined_df = pl.concat(all_cycles, how="diagonal")
 
+        # Register the DataFrame so DuckDB can query it
+        conn.register("combined_df_view", combined_df)
+
         # Convert to DuckDB table
         if append:
             # Append to existing table
             try:
-                conn.execute("INSERT INTO cycles SELECT * FROM combined_df")
+                conn.execute("INSERT INTO cycles SELECT * FROM combined_df_view")
             except duckdb.CatalogException:
                 # Table doesn't exist, create it
-                conn.execute("CREATE TABLE cycles AS SELECT * FROM combined_df")
+                conn.execute("CREATE TABLE cycles AS SELECT * FROM combined_df_view")
         else:
             conn.execute("DROP TABLE IF EXISTS cycles")
-            conn.execute("CREATE TABLE cycles AS SELECT * FROM combined_df")
+            conn.execute("CREATE TABLE cycles AS SELECT * FROM combined_df_view")
+
+        conn.unregister("combined_df_view")
 
         row_count = conn.execute("SELECT COUNT(*) FROM cycles").fetchone()[0]
         print(f"Created 'cycles' table with {row_count:,} rows")
@@ -188,14 +193,19 @@ def convert_excel_to_duckdb(
 
             table_name = sanitize_table_name(sheet_name)
 
+            # Register the DataFrame so DuckDB can query it
+            conn.register("metadata_df_view", df)
+
             if append:
                 try:
-                    conn.execute(f"INSERT INTO {table_name} SELECT * FROM df")
+                    conn.execute(f"INSERT INTO {table_name} SELECT * FROM metadata_df_view")
                 except duckdb.CatalogException:
-                    conn.execute(f"CREATE TABLE {table_name} AS SELECT * FROM df")
+                    conn.execute(f"CREATE TABLE {table_name} AS SELECT * FROM metadata_df_view")
             else:
                 conn.execute(f"DROP TABLE IF EXISTS {table_name}")
-                conn.execute(f"CREATE TABLE {table_name} AS SELECT * FROM df")
+                conn.execute(f"CREATE TABLE {table_name} AS SELECT * FROM metadata_df_view")
+
+            conn.unregister("metadata_df_view")
 
             row_count = conn.execute(f"SELECT COUNT(*) FROM {table_name}").fetchone()[0]
             print(f"Created '{table_name}' table with {row_count:,} rows")
@@ -491,16 +501,20 @@ def batch_convert_excel_to_duckdb(
     # Write cycles table
     if all_cycles:
         combined_cycles = pl.concat(all_cycles, how="diagonal")
+        conn.register("combined_cycles_view", combined_cycles)
         conn.execute("DROP TABLE IF EXISTS cycles")
-        conn.execute("CREATE TABLE cycles AS SELECT * FROM combined_cycles")
+        conn.execute("CREATE TABLE cycles AS SELECT * FROM combined_cycles_view")
+        conn.unregister("combined_cycles_view")
         total_rows = conn.execute("SELECT COUNT(*) FROM cycles").fetchone()[0]
         print(f"Created 'cycles' table with {total_rows:,} total rows")
 
     # Write metadata tables
     for table_name, dfs in all_metadata.items():
         combined_df = pl.concat(dfs, how="diagonal")
+        conn.register("combined_metadata_view", combined_df)
         conn.execute(f"DROP TABLE IF EXISTS {table_name}")
-        conn.execute(f"CREATE TABLE {table_name} AS SELECT * FROM combined_df")
+        conn.execute(f"CREATE TABLE {table_name} AS SELECT * FROM combined_metadata_view")
+        conn.unregister("combined_metadata_view")
         row_count = conn.execute(f"SELECT COUNT(*) FROM {table_name}").fetchone()[0]
         print(f"Created '{table_name}' table with {row_count:,} rows")
 
