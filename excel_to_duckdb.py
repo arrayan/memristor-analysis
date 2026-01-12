@@ -132,11 +132,20 @@ def convert_excel_to_duckdb(
 
         # Convert to DuckDB table
         if append:
-            # Append to existing table
+
+            # Append to existing table, handling schema differences
             try:
-                conn.execute("INSERT INTO cycles SELECT * FROM combined_df")
-            except duckdb.CatalogException:
-                # Table doesn't exist, create it
+                # Check if table exists
+                existing_tables = [t[0] for t in conn.execute("SHOW TABLES").fetchall()]
+                if "cycles" in existing_tables:
+                    # Get existing data and combine with new data
+                    existing_df = conn.execute("SELECT * FROM cycles").pl()
+                    combined_df = pl.concat([existing_df, combined_df], how="diagonal")
+                    conn.execute("DROP TABLE cycles")
+                conn.execute("CREATE TABLE cycles AS SELECT * FROM combined_df")
+            except Exception as e:
+                print(f"  Warning: Error during append: {e}")
+                conn.execute("DROP TABLE IF EXISTS cycles")
                 conn.execute("CREATE TABLE cycles AS SELECT * FROM combined_df")
         else:
             conn.execute("DROP TABLE IF EXISTS cycles")
@@ -160,9 +169,17 @@ def convert_excel_to_duckdb(
             table_name = sanitize_table_name(sheet_name)
 
             if append:
+                # Append to existing table, handling schema differences
                 try:
-                    conn.execute(f"INSERT INTO {table_name} SELECT * FROM df")
-                except duckdb.CatalogException:
+                    existing_tables = [t[0] for t in conn.execute("SHOW TABLES").fetchall()]
+                    if table_name in existing_tables:
+                        existing_df = conn.execute(f"SELECT * FROM {table_name}").pl()
+                        df = pl.concat([existing_df, df], how="diagonal")
+                        conn.execute(f"DROP TABLE {table_name}")
+                    conn.execute(f"CREATE TABLE {table_name} AS SELECT * FROM df")
+                except Exception as e:
+                    print(f"  Warning: Error during append for {table_name}: {e}")
+                    conn.execute(f"DROP TABLE IF EXISTS {table_name}")
                     conn.execute(f"CREATE TABLE {table_name} AS SELECT * FROM df")
             else:
                 conn.execute(f"DROP TABLE IF EXISTS {table_name}")
@@ -174,25 +191,32 @@ def convert_excel_to_duckdb(
         except Exception as e:
             print(f"  Warning: Could not process sheet '{sheet_name}': {e}")
 
-    # Create views for analysis only if cycles table exists (in case the sheet has no run(s))
+    # Create views for analysis (only if cycles table exists and has required columns)
     if all_cycles:
-        conn.execute("""
-            CREATE OR REPLACE VIEW cycle_summary AS
-            SELECT 
-                source_file,
-                cycle_number,
-                COUNT(*) as measurement_count,
-                MIN(Time) as start_time,
-                MAX(Time) as end_time,
-                AVG(I) as avg_current,
-                MAX(ABS(I)) as max_abs_current,
-                MIN(AV) as min_voltage,
-                MAX(AV) as max_voltage
-            FROM cycles
-            GROUP BY source_file, cycle_number
-            ORDER BY source_file, cycle_number
-        """)
-        print("Created 'cycle_summary' view")
+        # Check which columns exist in the cycles table
+        columns = [col[0] for col in conn.execute("DESCRIBE cycles").fetchall()]
+        required_cols = {'Time', 'I', 'AV'}
+
+        if required_cols.issubset(set(columns)):
+            conn.execute("""
+                CREATE OR REPLACE VIEW cycle_summary AS
+                SELECT 
+                    source_file,
+                    cycle_number,
+                    COUNT(*) as measurement_count,
+                    MIN(Time) as start_time,
+                    MAX(Time) as end_time,
+                    AVG(I) as avg_current,
+                    MAX(ABS(I)) as max_abs_current,
+                    MIN(AV) as min_voltage,
+                    MAX(AV) as max_voltage
+                FROM cycles
+                GROUP BY source_file, cycle_number
+                ORDER BY source_file, cycle_number
+            """)
+            print("Created 'cycle_summary' view")
+        else:
+            print(f"Skipping 'cycle_summary' view (missing columns: {required_cols - set(columns)})")
 
     # Close connection
     conn.close()
@@ -417,38 +441,45 @@ def batch_convert_excel_to_duckdb(
         total_rows = conn.execute("SELECT COUNT(*) FROM cycles").fetchone()[0]
         print(f"Created 'cycles' table with {total_rows:,} total rows")
 
-        # Create views
-        conn.execute("""
-            CREATE OR REPLACE VIEW cycle_summary AS
-            SELECT 
-                source_file,
-                cycle_number,
-                COUNT(*) as measurement_count,
-                MIN(Time) as start_time,
-                MAX(Time) as end_time,
-                AVG(I) as avg_current,
-                MAX(ABS(I)) as max_abs_current,
-                MIN(AV) as min_voltage,
-                MAX(AV) as max_voltage
-            FROM cycles
-            GROUP BY source_file, cycle_number
-            ORDER BY source_file, cycle_number
-        """)
+        # Check which columns exist in the cycles table
+        columns = [col[0] for col in conn.execute("DESCRIBE cycles").fetchall()]
+        required_cols = {'Time', 'I', 'AV'}
 
-        # Create file summary view
-        conn.execute("""
-            CREATE OR REPLACE VIEW file_summary AS
-            SELECT 
-                source_file,
-                COUNT(DISTINCT cycle_number) as num_cycles,
-                COUNT(*) as total_measurements,
-                MIN(cycle_number) as first_cycle,
-                MAX(cycle_number) as last_cycle
-            FROM cycles
-            GROUP BY source_file
-            ORDER BY source_file
-        """)
-        print("Created 'cycle_summary' and 'file_summary' views")
+        if required_cols.issubset(set(columns)):
+            # Create views
+            conn.execute("""
+                CREATE OR REPLACE VIEW cycle_summary AS
+                SELECT 
+                    source_file,
+                    cycle_number,
+                    COUNT(*) as measurement_count,
+                    MIN(Time) as start_time,
+                    MAX(Time) as end_time,
+                    AVG(I) as avg_current,
+                    MAX(ABS(I)) as max_abs_current,
+                    MIN(AV) as min_voltage,
+                    MAX(AV) as max_voltage
+                FROM cycles
+                GROUP BY source_file, cycle_number
+                ORDER BY source_file, cycle_number
+            """)
+
+            # Create file summary view
+            conn.execute("""
+                CREATE OR REPLACE VIEW file_summary AS
+                SELECT 
+                    source_file,
+                    COUNT(DISTINCT cycle_number) as num_cycles,
+                    COUNT(*) as total_measurements,
+                    MIN(cycle_number) as first_cycle,
+                    MAX(cycle_number) as last_cycle
+                FROM cycles
+                GROUP BY source_file
+                ORDER BY source_file
+            """)
+            print("Created 'cycle_summary' and 'file_summary' views")
+        else:
+            print(f"Skipping views (missing columns: {required_cols - set(columns)})")
 
     # Write metadata tables
     for table_name, dfs in all_metadata.items():
