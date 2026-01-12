@@ -11,7 +11,9 @@ from typing import Optional
 DB_PATH = Path(__file__).parent / "memristor_data.duckdb"
 
 
-def get_connection(db_path: Optional[Path] = None, read_only: bool = True) -> duckdb.DuckDBPyConnection:
+def get_connection(
+    db_path: Optional[Path] = None, read_only: bool = True
+) -> duckdb.DuckDBPyConnection:
     """Get a connection to the DuckDB database."""
     path = db_path or DB_PATH
     return duckdb.connect(str(path), read_only=read_only)
@@ -45,10 +47,9 @@ def list_source_files(db_path: Optional[Path] = None) -> pl.DataFrame:
 
 # Example analysis functions
 
+
 def get_cycle_data(
-    cycle_number: int,
-    source_file: Optional[str] = None,
-    db_path: Optional[Path] = None
+    cycle_number: int, source_file: Optional[str] = None, db_path: Optional[Path] = None
 ) -> pl.DataFrame:
     """Get all data for a specific cycle."""
     if source_file:
@@ -59,36 +60,39 @@ def get_cycle_data(
 
 
 def get_iv_curve(
-    cycle_number: int,
-    source_file: Optional[str] = None,
-    db_path: Optional[Path] = None
+    cycle_number: int, source_file: Optional[str] = None, db_path: Optional[Path] = None
 ) -> pl.DataFrame:
     """Get voltage-current data for plotting IV curves."""
     if source_file:
         where = f"WHERE cycle_number = {cycle_number} AND source_file = '{source_file}'"
     else:
         where = f"WHERE cycle_number = {cycle_number}"
-    return query(f"""
+    return query(
+        f"""
         SELECT AV as voltage, I as current, Time, source_file
         FROM cycles 
         {where}
         ORDER BY Time
-    """, db_path)
+    """,
+        db_path,
+    )
 
 
 def get_all_cycle_summary(db_path: Optional[Path] = None) -> pl.DataFrame:
     """Get summary statistics for all cycles."""
-    return query("SELECT * FROM cycle_summary ORDER BY source_file, cycle_number", db_path)
+    return query(
+        "SELECT * FROM cycle_summary ORDER BY source_file, cycle_number", db_path
+    )
 
 
 def get_resistance_states(
-    source_file: Optional[str] = None,
-    db_path: Optional[Path] = None
+    source_file: Optional[str] = None, db_path: Optional[Path] = None
 ) -> pl.DataFrame:
     """Extract high and low resistance state values per cycle."""
     filter_clause = f"AND source_file = '{source_file}'" if source_file else ""
 
-    return query(f"""
+    return query(
+        f"""
         SELECT 
             source_file,
             cycle_number,
@@ -100,17 +104,19 @@ def get_resistance_states(
         WHERE (ILRS IS NOT NULL OR IHRS IS NOT NULL) {filter_clause}
         GROUP BY source_file, cycle_number
         ORDER BY source_file, cycle_number
-    """, db_path)
+    """,
+        db_path,
+    )
 
 
 def get_endurance_trend(
-    source_file: Optional[str] = None,
-    db_path: Optional[Path] = None
+    source_file: Optional[str] = None, db_path: Optional[Path] = None
 ) -> pl.DataFrame:
     """Analyze how device characteristics change over cycles (endurance)."""
     where = f"WHERE source_file = '{source_file}'" if source_file else ""
 
-    return query(f"""
+    return query(
+        f"""
         SELECT 
             source_file,
             cycle_number,
@@ -123,12 +129,15 @@ def get_endurance_trend(
         {where}
         GROUP BY source_file, cycle_number
         ORDER BY source_file, cycle_number
-    """, db_path)
+    """,
+        db_path,
+    )
 
 
 def compare_files(db_path: Optional[Path] = None) -> pl.DataFrame:
     """Compare statistics across different source files (batch mode)."""
-    return query("""
+    return query(
+        """
         SELECT 
             source_file,
             COUNT(DISTINCT cycle_number) as num_cycles,
@@ -140,7 +149,9 @@ def compare_files(db_path: Optional[Path] = None) -> pl.DataFrame:
         FROM cycles
         GROUP BY source_file
         ORDER BY source_file
-    """, db_path)
+    """,
+        db_path,
+    )
 
 
 if __name__ == "__main__":
@@ -176,4 +187,3 @@ if __name__ == "__main__":
     if "file_summary" in tables:
         print("\n--- File Comparison ---")
         print(compare_files())
-
