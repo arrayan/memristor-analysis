@@ -1,11 +1,7 @@
 #!/usr/bin/env python3
 import argparse
 
-from converter import (
-    convert_single,
-    batch_convert,
-    export_to_parquet
-)
+from converter import convert_single, batch_convert, export_to_parquet
 
 
 def main():
@@ -70,7 +66,7 @@ Examples:
         ):
             input_pattern = args.excel_files[0]
         else:
-            input_pattern = args.excel_files  #List of files
+            input_pattern = args.excel_files  # List of files
 
         db_path = batch_convert(
             input_pattern,
