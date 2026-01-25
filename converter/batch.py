@@ -10,6 +10,7 @@ from .writer import DuckDBWriter
 
 class BatchConverter:
     """batch conversion of excel files to DuckDB"""
+
     def __init__(self, db_path: str | Path, max_workers: Optional[int] = None):
         self.db_path = Path(db_path)
         self.max_workers = max_workers
@@ -75,8 +76,14 @@ class BatchConverter:
             result = self.file_processor.process(file_path, exclude_sheets)
             results.append(result)
 
-            status = f"{result.row_count:,} rows" if result.row_count > 0 else "metadata only"
-            print(f"[{i}/{len(files)}] {file_path.name}: {status} ({result.elapsed:.2f}s)")
+            status = (
+                f"{result.row_count:,} rows"
+                if result.row_count > 0
+                else "metadata only"
+            )
+            print(
+                f"[{i}/{len(files)}] {file_path.name}: {status} ({result.elapsed:.2f}s)"
+            )
 
         return results
 

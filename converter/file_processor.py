@@ -53,7 +53,7 @@ class ExcelFileProcessor:
                 if df is not None:
                     all_cycles.append(df)
 
-            if all_cycles: #diagonal concatenation
+            if all_cycles:  # diagonal concatenation
                 result.cycles_df = pl.concat(all_cycles, how="diagonal")
 
             # Process metadata sheets
