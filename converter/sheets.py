@@ -3,16 +3,17 @@ import polars as pl
 from typing import Optional
 from .models import FileMetadata
 
+
 class SheetProcessor:
     """Processes individual Excel sheets into DataFrames."""
+
     """ .xslsx -> FastExcel -> PolarsDF(In process) -> ..... """
 
     @staticmethod
     def clean_column_names(df: pl.DataFrame) -> pl.DataFrame:
         """Clean column names by removing special characters."""
         clean_cols = {
-            col: col.strip().replace("#", "").replace(" ", "_")
-            for col in df.columns
+            col: col.strip().replace("#", "").replace(" ", "_") for col in df.columns
         }
         return df.rename(clean_cols)
 
@@ -69,16 +70,18 @@ class SheetProcessor:
             df = excel_file.load_sheet_by_name(sheet_name).to_polars()
 
             # Add metadata columns
-            df = df.with_columns([
-                pl.lit(cycle_num).alias("cycle_number"),
-                pl.lit(metadata.source_id).alias("source_file"),
-                pl.lit(metadata.stack_id).alias("stack_id"),
-                pl.lit(metadata.device_id).alias("device_id"),
-                pl.lit(metadata.device_row).alias("device_row"),
-                pl.lit(metadata.device_col).alias("device_col"),
-                pl.lit(metadata.measurement_type).alias("measurement_type"),
-                pl.lit(metadata.file_path).alias("file_path"),
-            ])
+            df = df.with_columns(
+                [
+                    pl.lit(cycle_num).alias("cycle_number"),
+                    pl.lit(metadata.source_id).alias("source_file"),
+                    pl.lit(metadata.stack_id).alias("stack_id"),
+                    pl.lit(metadata.device_id).alias("device_id"),
+                    pl.lit(metadata.device_row).alias("device_row"),
+                    pl.lit(metadata.device_col).alias("device_col"),
+                    pl.lit(metadata.measurement_type).alias("measurement_type"),
+                    pl.lit(metadata.file_path).alias("file_path"),
+                ]
+            )
 
             df = self.clean_column_names(df)
             df = self.fix_norm_cond(df)
@@ -111,4 +114,8 @@ class SheetProcessor:
             return df, table_name, None
 
         except Exception as e:
-            return None, table_name, f"Error processing metadata sheet '{sheet_name}': {e}"
+            return (
+                None,
+                table_name,
+                f"Error processing metadata sheet '{sheet_name}': {e}",
+            )
