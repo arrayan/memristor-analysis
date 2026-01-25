@@ -7,8 +7,10 @@ from .models import ProcessingResult
 from .metadata import MetadataExtractor
 from .sheets import SheetProcessor
 
+
 class ExcelFileProcessor:
     """Processes a single Excel file into DataFrames."""
+
     def __init__(self):
         self.metadata_extractor = MetadataExtractor()
         self.sheet_processor = SheetProcessor()
@@ -29,8 +31,16 @@ class ExcelFileProcessor:
             excel_file = fastexcel.read_excel(file_path)
             sheet_names = excel_file.sheet_names
 
-            run_sheets = [s for s in sheet_names if s.startswith("Run") and s not in exclude_sheets]
-            other_sheets = [s for s in sheet_names if not s.startswith("Run") and s not in exclude_sheets]
+            run_sheets = [
+                s
+                for s in sheet_names
+                if s.startswith("Run") and s not in exclude_sheets
+            ]
+            other_sheets = [
+                s
+                for s in sheet_names
+                if not s.startswith("Run") and s not in exclude_sheets
+            ]
 
             # Process all run sheets
             all_cycles = []
