@@ -53,7 +53,7 @@ class ExcelFileProcessor:
                 if df is not None:
                     all_cycles.append(df)
 
-            if all_cycles:
+            if all_cycles: #diagonal concatenation
                 result.cycles_df = pl.concat(all_cycles, how="diagonal")
 
             # Process metadata sheets
@@ -68,7 +68,5 @@ class ExcelFileProcessor:
 
         except Exception as e:
             result.warnings.append(f"Fatal error: {e}")
-
         result.elapsed = time.time() - start_time
-
         return result
