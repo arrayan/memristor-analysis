@@ -3,9 +3,11 @@ from dataclasses import dataclass
 from dataclasses import field
 from typing import Optional
 
+
 @dataclass
 class FileMetadata:
     """Metadata extracted from file path for stack-level analysis and imports"""
+
     source_id: str
     stack_id: Optional[str] = None
     device_id: Optional[str] = None
@@ -18,6 +20,7 @@ class FileMetadata:
 @dataclass
 class ProcessingResult:
     """Result of processing a single Excel file."""
+
     file_id: str
     cycles_df: Optional[pl.DataFrame] = None
     metadata_dfs: dict[str, pl.DataFrame] = field(default_factory=dict)
