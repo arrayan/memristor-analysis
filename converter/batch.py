@@ -1,7 +1,11 @@
+import multiprocessing
+
 import polars as pl
 import glob
+import os
 import time
 from pathlib import Path
+import concurrent.futures
 from typing import Optional
 from .models import ProcessingResult
 from .file_processor import ExcelFileProcessor
@@ -70,22 +74,27 @@ class BatchConverter:
     ) -> list[ProcessingResult]:
         """Process all files sequentially."""
         exclude_sheets = exclude_sheets or []
+        max_workers = self.max_workers or max(1, os.cpu_count() - 1) #1 core left free for safety just in case GUI takes up memory
+        with concurrent.futures.ProcessPoolExecutor() as executor:
+            results = []
+            for i, file_path in enumerate(files, 1):
+                result = self.file_processor.process(file_path, exclude_sheets)
+                results.append(result)
 
-        results = []
-        for i, file_path in enumerate(files, 1):
-            result = self.file_processor.process(file_path, exclude_sheets)
-            results.append(result)
+                status = (
+                    f"{result.row_count:,} rows"
+                    if result.row_count > 0
+                    else "metadata only"
+                )
+                print(
+                    f"[{i}/{len(files)}] {file_path.name}: {status} ({result.elapsed:.2f}s)"
+                )
 
-            status = (
-                f"{result.row_count:,} rows"
-                if result.row_count > 0
-                else "metadata only"
-            )
-            print(
-                f"[{i}/{len(files)}] {file_path.name}: {status} ({result.elapsed:.2f}s)"
-            )
+            return results
 
-        return results
+
+
+
 
     def _write_results(self, results: list[ProcessingResult]):
         """Combine and write all results to database."""
