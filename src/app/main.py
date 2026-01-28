@@ -6,7 +6,6 @@ def main():
     app = qt.QApplication(sys.argv)
     app.setStyle("Fusion")
 
-    # Load External Stylesheet
     try:
         with open("styles.qss", "r") as f:
             app.setStyleSheet(f.read())

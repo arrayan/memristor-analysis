@@ -1,9 +1,9 @@
 import PySide6.QtWidgets as qt
 from PySide6.QtCore import Qt
-
 from .side_bar import OptionsSidebar
 from .navigation_bar import NavigationBar
-from .action_bar import ActionBar
+from .menu_bar import MenuBar
+from core.actions import MenuActions
 
 class MainWindow(qt.QMainWindow):
     def __init__(self):
@@ -11,7 +11,8 @@ class MainWindow(qt.QMainWindow):
         self.setWindowTitle("Memristor Analysis Tool")
         self.resize(1200, 800)
 
-        self.setup_menu_bar()
+        self.menu_bar = MenuBar(self)
+        self.setMenuBar(self.menu_bar)
 
         # Central Layout
         central_widget = qt.QWidget()
@@ -39,13 +40,7 @@ class MainWindow(qt.QMainWindow):
         
         self.main_layout.addLayout(body_layout)
 
-    def setup_menu_bar(self):
-        bar = self.menuBar()
-        file_menu = bar.addMenu("File")
-        file_menu.addAction("Import Device")
-        file_menu.addAction("Import Stack")
-        file_menu.addSeparator()
-        file_menu.addAction("Exit", self.close)
-        
-        help_menu = bar.addMenu("Help")
-        help_menu.addAction("View Help")
+    def setup_connections(self):
+        menu_actions = self.menu_bar.actions
+
+        menu_actions[MenuActions.EXIT].triggered.connect(self.close)
