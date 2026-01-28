@@ -73,7 +73,7 @@ class BatchConverter:
         """Process all files sequentially."""
         exclude_sheets = exclude_sheets or []
         max_workers = self.max_workers or max(
-            1, os.cpu_count() - 1
+            1, os.cpu_count() - 1 # type: ignore
         )  # 1 core left free for safety just in case GUI takes up memory
         results = []
         with concurrent.futures.ProcessPoolExecutor(
