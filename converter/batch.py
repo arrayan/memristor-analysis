@@ -1,7 +1,9 @@
 import polars as pl
 import glob
+import os
 import time
 from pathlib import Path
+import concurrent.futures
 from typing import Optional
 from .models import ProcessingResult
 from .file_processor import ExcelFileProcessor
@@ -70,20 +72,39 @@ class BatchConverter:
     ) -> list[ProcessingResult]:
         """Process all files sequentially."""
         exclude_sheets = exclude_sheets or []
-
+        max_workers = self.max_workers or max(
+            1, os.cpu_count() - 1
+        )  # 1 core left free for safety just in case GUI takes up memory
         results = []
-        for i, file_path in enumerate(files, 1):
-            result = self.file_processor.process(file_path, exclude_sheets)
-            results.append(result)
+        with concurrent.futures.ProcessPoolExecutor(
+            max_workers=max_workers
+        ) as executor:
+            # submit all tasks
+            future_to_file = {
+                executor.submit(
+                    self.file_processor.process, file_path, exclude_sheets
+                ): file_path
+                for file_path in files
+            }
 
-            status = (
-                f"{result.row_count:,} rows"
-                if result.row_count > 0
-                else "metadata only"
-            )
-            print(
-                f"[{i}/{len(files)}] {file_path.name}: {status} ({result.elapsed:.2f}s)"
-            )
+            for i, future in enumerate(
+                concurrent.futures.as_completed(future_to_file), start=1
+            ):
+                file_path = future_to_file[future]
+                try:
+                    result = future.result()
+                    results.append(result)
+
+                    status = (
+                        f"{result.row_count:,} rows"
+                        if result.row_count > 0
+                        else "metadata only"
+                    )
+                    print(
+                        f"[{i}/{len(files)}] {file_path.name}: {status} ({result.elapsed:.2f}s)"
+                    )
+                except Exception as e:
+                    print(f"[{i}/{len(files)}] {file_path.name}: ERROR - {e}")
 
         return results
 
