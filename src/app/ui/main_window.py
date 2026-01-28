@@ -4,6 +4,7 @@ from .side_bar import OptionsSidebar
 from .navigation_bar import NavigationBar
 from .menu_bar import MenuBar
 from core.actions import MenuActions
+from converter import BatchConverter
 
 class MainWindow(qt.QMainWindow):
     def __init__(self):
@@ -13,6 +14,8 @@ class MainWindow(qt.QMainWindow):
 
         self.menu_bar = MenuBar(self)
         self.setMenuBar(self.menu_bar)
+
+        self.setup_connections()
 
         # Central Layout
         central_widget = qt.QWidget()
@@ -41,6 +44,15 @@ class MainWindow(qt.QMainWindow):
         self.main_layout.addLayout(body_layout)
 
     def setup_connections(self):
-        menu_actions = self.menu_bar.actions
+        menu_actions = self.menu_bar.menu_actions
 
         menu_actions[MenuActions.EXIT].triggered.connect(self.close)
+        device_path = menu_actions[MenuActions.IMPORT_DEVICE].triggered.connect(self.import_device)
+
+    def import_device(self):
+        device_path = qt.QFileDialog.getExistingDirectory(self, "Select Device Folder")
+
+        converter = BatchConverter("output.duckdb")
+        converter.convert(device_path)
+
+        return device_path
