@@ -18,7 +18,7 @@ class MenuActions(Enum):
     EXPORT_CURRENT_APS = ("APS", None)
 
     # EXIT
-    EXIT = ("Exit", "Alt+F4")
+    EXIT = ("Exit", "Ctrl+Q")
     
     # HELP MENU
     VIEW_HELP = ("View Help", "F1")
