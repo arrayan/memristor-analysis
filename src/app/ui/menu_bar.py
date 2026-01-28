@@ -1,6 +1,6 @@
 import PySide6.QtWidgets as qt
 from PySide6.QtGui import QAction
-from core.actions import MenuActions
+from core import MenuActions
 
 class MenuBar(qt.QMenuBar):
     def __init__(self, parent=None):
@@ -21,15 +21,6 @@ class MenuBar(qt.QMenuBar):
         # File Menu
         self.file_menu = self.addMenu("File")
 
-        # Actions
-        # self.action_import_device = QAction("Device", self)
-        # self.action_import_stack = QAction("Stack", self)
-        # self.action_export_all_to = QAction("All To", self)
-        # self.action_export_current_to = QAction("Current To", self)
-        # self.action_export_all = QAction("Export All", self)
-        # self.action_export_current = QAction("Current", self)
-        # self.action_exit = QAction("Exit", self)
-        # self.action_exit.triggered.connect(qt.QApplication.quit)
 
         # Import
         self.file_menu.addSection("Import")

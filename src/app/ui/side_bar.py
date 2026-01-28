@@ -1,7 +1,7 @@
 import PySide6.QtWidgets as qt
 from PySide6.QtCore import Qt
 
-class OptionsSidebar(qt.QGroupBox):
+class SideBar(qt.QGroupBox):
     def __init__(self, parent=None):
         super().__init__("Options", parent)
         self.setFixedWidth(220)

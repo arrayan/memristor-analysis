@@ -1,10 +1,12 @@
 import PySide6.QtWidgets as qt
 from PySide6.QtCore import Qt
-from .side_bar import OptionsSidebar
+from .side_bar import SideBar
 from .navigation_bar import NavigationBar
 from .menu_bar import MenuBar
-from core.actions import MenuActions
+from core import MenuActions
 from converter import BatchConverter
+from pathlib import Path
+import subprocess
 
 class MainWindow(qt.QMainWindow):
     def __init__(self):
@@ -36,7 +38,7 @@ class MainWindow(qt.QMainWindow):
         plot_layout.addWidget(qt.QLabel("Plot Canvas Area", alignment=Qt.AlignmentFlag.AlignCenter))
 
         # Sidebar
-        self.sidebar = OptionsSidebar()
+        self.sidebar = SideBar()
 
         body_layout.addWidget(self.plot_area, stretch=4)
         body_layout.addWidget(self.sidebar, stretch=1)
@@ -49,10 +51,15 @@ class MainWindow(qt.QMainWindow):
         menu_actions[MenuActions.EXIT].triggered.connect(self.close)
         device_path = menu_actions[MenuActions.IMPORT_DEVICE].triggered.connect(self.import_device)
 
-    def import_device(self):
+    def import_device(self): # TODO connect to converter
         device_path = qt.QFileDialog.getExistingDirectory(self, "Select Device Folder")
 
-        converter = BatchConverter("output.duckdb")
-        converter.convert(device_path)
+        # exel_files = [
+        #     str(p) for p in Path(device_path).iterdir()
+        #     if p.is_file() and p.suffix.lower() == ".xlsx"
+        # ]
+
+        # converter = BatchConverter("output.duckdb")
+        # converter.convert(exel_files)
 
         return device_path
