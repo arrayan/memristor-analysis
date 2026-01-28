@@ -1,5 +1,3 @@
-import multiprocessing
-
 import polars as pl
 import glob
 import os
@@ -68,23 +66,30 @@ class BatchConverter:
         return [f for f in files if not f.name.startswith("~$")]
 
     def _process_files(
-            self,
-            files: list[Path],
-            exclude_sheets: Optional[list[str]],
+        self,
+        files: list[Path],
+        exclude_sheets: Optional[list[str]],
     ) -> list[ProcessingResult]:
         """Process all files sequentially."""
         exclude_sheets = exclude_sheets or []
-        max_workers = self.max_workers or max(1,
-                                              os.cpu_count() - 1)  # 1 core left free for safety just in case GUI takes up memory
+        max_workers = self.max_workers or max(
+            1, os.cpu_count() - 1
+        )  # 1 core left free for safety just in case GUI takes up memory
         results = []
-        with concurrent.futures.ProcessPoolExecutor(max_workers=max_workers) as executor:
+        with concurrent.futures.ProcessPoolExecutor(
+            max_workers=max_workers
+        ) as executor:
             # submit all tasks
             future_to_file = {
-                executor.submit(self.file_processor.process, file_path, exclude_sheets): file_path
+                executor.submit(
+                    self.file_processor.process, file_path, exclude_sheets
+                ): file_path
                 for file_path in files
             }
 
-            for i, future in enumerate(concurrent.futures.as_completed(future_to_file), start=1):
+            for i, future in enumerate(
+                concurrent.futures.as_completed(future_to_file), start=1
+            ):
                 file_path = future_to_file[future]
                 try:
                     result = future.result()
@@ -95,12 +100,13 @@ class BatchConverter:
                         if result.row_count > 0
                         else "metadata only"
                     )
-                    print(f"[{i}/{len(files)}] {file_path.name}: {status} ({result.elapsed:.2f}s)")
+                    print(
+                        f"[{i}/{len(files)}] {file_path.name}: {status} ({result.elapsed:.2f}s)"
+                    )
                 except Exception as e:
                     print(f"[{i}/{len(files)}] {file_path.name}: ERROR - {e}")
 
         return results
-
 
     def _write_results(self, results: list[ProcessingResult]):
         """Combine and write all results to database."""
