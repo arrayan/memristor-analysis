@@ -75,8 +75,8 @@ class BatchConverter:
         if self.max_workers:
             max_workers = self.max_workers
         else:
-            cpu_count = os.cpu_count() or 1 #none or 1 is 1
-            max_workers = max(cpu_count - 1 , 1)
+            cpu_count = os.cpu_count() or 1  # none or 1 is 1
+            max_workers = max(cpu_count - 1, 1)
         results = []
         with concurrent.futures.ProcessPoolExecutor(
             max_workers=max_workers
