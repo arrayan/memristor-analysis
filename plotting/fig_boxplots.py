@@ -1,74 +1,93 @@
 from __future__ import annotations
 
+import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 import plotly.express as px
 
 
-def build_boxplots_fig(box_table: pd.DataFrame, sets: list[str]) -> go.Figure:
+def build_boxplots_fig(box_table: "pd.DataFrame", sets: list[str]) -> go.Figure:
+    """
+    Boxplots with a dropdown for parameter.
+
+    Expects box_table columns (from transforms.build_box_table / build_cdf_table):
+      source_file, cycle_number, VSET, R_LRS, R_HRS, V_reset, I_reset_max, V_forming
+    """
     fig = go.Figure()
 
     if box_table is None or box_table.empty or not sets:
-        fig.update_layout(title="Boxplots – no data")
+        fig.update_layout(title="Boxplot – no data")
         return fig
 
     param_map = {
-        "VSET": "V_set (V)",
-        "V_reset": "V_reset (V)",
-        "R_LRS": "R_LRS (Ω)",
-        "R_HRS": "R_HRS (Ω)",
-        "I_reset_max": "I_reset_max (A)",
-        "V_forming": "V_forming (V)",
+        "VSET": {"pretty": "V_set (V)"},
+        "V_reset": {"pretty": "V_reset (V)"},
+        "R_LRS": {"pretty": "R_LRS (Ω)"},
+        "R_HRS": {"pretty": "R_HRS (Ω)"},
+        "I_reset_max": {"pretty": "I_reset_max (A)"},
+        "V_forming": {"pretty": "V_forming (V)"},
     }
 
-    param_map = {k: v for k, v in param_map.items() if k in box_table.columns}
-    if not param_map:
-        fig.update_layout(title="Boxplots – no valid columns")
-        return fig
+    first_param = "VSET" if "VSET" in param_map else next(iter(param_map))
 
-    params = list(param_map.keys())
-    first_param = params[0]
-
+    # one color per set
     cols = px.colors.sample_colorscale("Viridis", max(len(sets), 2))
     color_map = {s: cols[i] for i, s in enumerate(sets)}
 
-    for p in params:
+    for param in param_map.keys():
         for s in sets:
             df_s = box_table[box_table["source_file"] == s]
+            vals = pd.to_numeric(df_s[param], errors="coerce").dropna() if param in df_s.columns else pd.Series(dtype=float)
+            if vals.empty:
+                # still create an “empty” trace so visibility logic stays consistent
+                fig.add_trace(
+                    go.Box(
+                        y=[],
+                        name=s,
+                        marker_color=color_map.get(s, None),
+                        visible=(param == first_param),
+                        meta={"param": param},
+                        showlegend=False,
+                    )
+                )
+                continue
+
             fig.add_trace(
                 go.Box(
-                    y=df_s[p],
+                    y=vals,
                     name=s,
-                    visible=(p == first_param),
-                    marker_color=color_map[s],
-                    meta={"param": p},
+                    boxmean=False,
+                    marker_color=color_map.get(s, None),
+                    line=dict(width=2),
+                    visible=(param == first_param),
+                    meta={"param": param},
                 )
             )
 
-    def vis(p):
-        return [tr.meta["param"] == p for tr in fig.data]
+    def vis_for(param_val: str) -> list[bool]:
+        return [tr.meta["param"] == param_val for tr in fig.data]
+
+    buttons = []
+    for param, info in param_map.items():
+        buttons.append(
+            dict(
+                label=info["pretty"],
+                method="update",
+                args=[
+                    {"visible": vis_for(param)},
+                    {"title": f"Boxplot – {info['pretty']}", "yaxis.title.text": info["pretty"]},
+                ],
+            )
+        )
 
     fig.update_layout(
-        updatemenus=[
-            dict(
-                buttons=[
-                    dict(
-                        label=param_map[p],
-                        method="update",
-                        args=[
-                            {"visible": vis(p)},
-                            {"title": f"Boxplots – {param_map[p]}", "yaxis.title": param_map[p]},
-                        ],
-                    )
-                    for p in params
-                ],
-                x=1.02,
-                y=1.15,
-            )
-        ],
-        title=f"Boxplots – {param_map[first_param]}",
-        xaxis_title="Set",
-        yaxis_title=param_map[first_param],
+        updatemenus=[dict(buttons=buttons, direction="down", showactive=True, x=1.02, xanchor="left", y=1.15, yanchor="top")],
+        title=f"Boxplot – {param_map[first_param]['pretty']}",
+        xaxis_title="Set / File",
+        yaxis_title=param_map[first_param]["pretty"],
+        width=900,
+        height=600,
+        boxmode="group",
     )
 
     return fig
