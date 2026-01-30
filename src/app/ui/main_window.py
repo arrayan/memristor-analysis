@@ -4,7 +4,7 @@ from .side_bar import SideBar
 from .navigation_bar import NavigationBar
 from .menu_bar import MenuBar
 from core import MenuActions
-from converter import BatchConverter
+from converter import BatchConverter, path_to_glob
 from pathlib import Path
 import subprocess
 
@@ -71,21 +71,22 @@ class MainWindow(qt.QMainWindow):
         title = f"Select {mode.capitalize} Folder"
 
         # Get path to import directory
-        path = qt.QFileDialog.getExistingDirectory(self, title)
-        print(path)
-        # 
-        if not path:
+        folder = qt.QFileDialog.getExistingDirectory(self, title)
+
+        # If User presses "Cancel"
+        if not folder:
             return
         
-        folder = Path(path)
-        glob_pattern = str(folder / "**" / "*.xlsx")
-
+        path = path_to_glob(folder)
+        
+        # Set up Converter
         converter = BatchConverter("output.duckdb")
 
+        #
         if mode == "device":
             # Find all Excel files recursively in the device folder
-            converter.convert(glob_pattern)
+            converter.convert(path)
 
         elif mode == "stack":
             # Stack import also uses recursive glob pattern
-            converter.convert(glob_pattern)
+            converter.convert(path) 
