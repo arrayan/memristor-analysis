@@ -1,5 +1,5 @@
 import PySide6.QtWidgets as qt
-from PySide6.QtGui import QAction
+from PySide6.QtGui import QAction, QActionGroup
 from core import MenuActions
 
 class MenuBar(qt.QMenuBar):
@@ -18,16 +18,19 @@ class MenuBar(qt.QMenuBar):
             # Store it so we can access it later
             self.menu_actions[action] = menu_action
 
-        # File Menu
+        self.setup_file_menu()
+        self.setup_options_menu()
+        self.setup_help_menu()
+        
+
+    def setup_file_menu(self):
         self.file_menu = self.addMenu("File")
 
-
-        # Import
         self.file_menu.addSection("Import")
         self.file_menu.addAction(self.menu_actions[MenuActions.IMPORT_DEVICE])
         self.file_menu.addAction(self.menu_actions[MenuActions.IMPORT_STACK])
         self.file_menu.addSeparator()
-        # Export
+
         self.file_menu.addSection("Export")
         self.file_sub_menu_export_all = self.file_menu.addMenu("All To")
         self.file_sub_menu_export_current = self.file_menu.addMenu("Current To")
@@ -40,10 +43,26 @@ class MenuBar(qt.QMenuBar):
         self.file_menu.addAction(self.menu_actions[MenuActions.EXPORT_ALL])
         self.file_menu.addAction(self.menu_actions[MenuActions.EXPORT_CURRENT])
         self.file_menu.addSeparator()
-        # Exit
+
         self.file_menu.addAction(self.menu_actions[MenuActions.EXIT])
 
-        # Help Menu
+    def setup_options_menu(self):
+        self.options_menu = self.addMenu("Options")
+        scale = QActionGroup(self)
+        scale.setExclusive(True)
+        scale_lin = QAction("linear", self, checkable=True)
+        scale_log = QAction("linear", self, checkable=True)
+        scale.addAction(scale_lin)
+        scale_lin.setChecked(True)
+        scale.addAction(scale_log)
+
+        self.options_menu.addSection("Scale")
+        self.options_menu.addActions([scale_lin, scale_log])
+
+
+        return
+
+    def setup_help_menu(self):
         self.help_menu = self.addMenu("Help")
         self.action_view_help = QAction("View Help", self)
         self.help_menu.addAction(self.action_view_help)

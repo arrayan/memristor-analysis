@@ -1,6 +1,5 @@
 import PySide6.QtWidgets as qt
 from PySide6.QtCore import Qt
-from .side_bar import SideBar
 from .navigation_bar import NavigationBar
 from .menu_bar import MenuBar
 from core import MenuActions
@@ -35,10 +34,9 @@ class MainWindow(qt.QMainWindow):
 
         # Add Navigation Row
         self.nav_bar = NavigationBar()
-        self.main_layout.addLayout(self.nav_bar)
+        self.main_layout.addLayout(self.nav_bar, stretch=0)
 
-        # Body Layout
-        body_layout = qt.QHBoxLayout()
+        
         
         # Plot Area
         self.plot_area = qt.QFrame()
@@ -46,13 +44,7 @@ class MainWindow(qt.QMainWindow):
         plot_layout = qt.QVBoxLayout(self.plot_area)
         plot_layout.addWidget(qt.QLabel("Plot Canvas Area", alignment=Qt.AlignmentFlag.AlignCenter))
 
-        # Sidebar
-        self.sidebar = SideBar()
-
-        body_layout.addWidget(self.plot_area, stretch=4)
-        body_layout.addWidget(self.sidebar, stretch=1)
-        
-        self.main_layout.addLayout(body_layout)
+        self.main_layout.addWidget(self.plot_area, stretch=1)
 
     def setup_connections(self):
         menu_actions = self.menu_bar.menu_actions
