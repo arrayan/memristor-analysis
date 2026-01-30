@@ -77,13 +77,15 @@ class MainWindow(qt.QMainWindow):
         if not path:
             return
         
+        folder = Path(path)
+        glob_pattern = str(folder / "**" / "*.xlsx")
 
         converter = BatchConverter("output.duckdb")
-        
-        
+
         if mode == "device":
-            converter.convert(path)
-        
+            # Find all Excel files recursively in the device folder
+            converter.convert(glob_pattern)
+
         elif mode == "stack":
-            # TODO implement stack import
-            print("this feature is currently under construction")
+            # Stack import also uses recursive glob pattern
+            converter.convert(glob_pattern)
