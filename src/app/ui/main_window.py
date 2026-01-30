@@ -11,13 +11,22 @@ import subprocess
 class MainWindow(qt.QMainWindow):
     def __init__(self):
         super().__init__()
+
+        # Initialize Window
         self.setWindowTitle("Memristor Analysis Tool")
         self.resize(1200, 800)
 
+        # Build UI
+        self.setup_ui()        
+
+        # Connect Buttons
+        self.setup_connections()
+
+        
+        
+    def setup_ui(self) -> None:
         self.menu_bar = MenuBar(self)
         self.setMenuBar(self.menu_bar)
-
-        self.setup_connections()
 
         # Central Layout
         central_widget = qt.QWidget()
@@ -56,13 +65,15 @@ class MainWindow(qt.QMainWindow):
         menu_actions[MenuActions.IMPORT_STACK].triggered.connect(
             lambda: self.handle_import(mode="stack")
         )
-        
 
     def handle_import(self, mode: str): # TODO connect to converter
+        # Set Window Title
         title = f"Select {mode.capitalize} Folder"
 
+        # Get path to import directory
         path = qt.QFileDialog.getExistingDirectory(self, title)
-
+        print(path)
+        # 
         if not path:
             return
         
