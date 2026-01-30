@@ -49,17 +49,30 @@ class MainWindow(qt.QMainWindow):
         menu_actions = self.menu_bar.menu_actions
 
         menu_actions[MenuActions.EXIT].triggered.connect(self.close)
-        device_path = menu_actions[MenuActions.IMPORT_DEVICE].triggered.connect(self.import_device)
 
-    def import_device(self): # TODO connect to converter
-        device_path = qt.QFileDialog.getExistingDirectory(self, "Select Device Folder")
+        menu_actions[MenuActions.IMPORT_DEVICE].triggered.connect(
+            lambda: self.handle_import(mode="device")
+        )
+        menu_actions[MenuActions.IMPORT_STACK].triggered.connect(
+            lambda: self.handle_import(mode="stack")
+        )
+        
 
-        # exel_files = [
-        #     str(p) for p in Path(device_path).iterdir()
-        #     if p.is_file() and p.suffix.lower() == ".xlsx"
-        # ]
+    def handle_import(self, mode: str): # TODO connect to converter
+        title = f"Select {mode.capitalize} Folder"
 
-        # converter = BatchConverter("output.duckdb")
-        # converter.convert(exel_files)
+        path = qt.QFileDialog.getExistingDirectory(self, title)
 
-        return device_path
+        if not path:
+            return
+        
+
+        converter = BatchConverter("output.duckdb")
+        
+        
+        if mode == "device":
+            converter.convert(path)
+        
+        elif mode == "stack":
+            # TODO implement stack import
+            print("this feature is currently under construction")
