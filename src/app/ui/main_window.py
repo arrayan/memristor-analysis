@@ -4,7 +4,6 @@ from .navigation_bar import NavigationBar
 from .menu_bar import MenuBar
 from core import MenuAction, Mode
 from converter import BatchConverter, path_to_glob
-from pathlib import Path
 
 class MainWindow(qt.QMainWindow):
     def __init__(self):
@@ -72,12 +71,12 @@ class MainWindow(qt.QMainWindow):
         
         # Set up Converter
         converter = BatchConverter("output.duckdb")
+        converter.convert(path)
+        
+        # if mode == "device":
+        #     # Find all Excel files recursively in the device folder
+        #     converter.convert(path)
 
-        #
-        if mode == "device":
-            # Find all Excel files recursively in the device folder
-            converter.convert(path)
-
-        elif mode == "stack":
-            # Stack import also uses recursive glob pattern
-            converter.convert(path) 
+        # elif mode == "stack":
+        #     # Stack import also uses recursive glob pattern
+        #     converter.convert(path) 
