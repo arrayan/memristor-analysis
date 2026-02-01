@@ -1,6 +1,7 @@
 from pathlib import Path
+from core import Mode
 
-def path_to_glob(path: Path | str) -> str:
+def path_to_glob(path: Path | str, mode: Mode) -> str:
     """
     Convert Windows Paths to Glob Pattern
     
@@ -10,6 +11,13 @@ def path_to_glob(path: Path | str) -> str:
     :rtype: str
     """
     folder = Path(path)
-    glob_pattern = str(folder / "**" / "*.xlsx")
+
+    match mode:
+        case Mode.DEVICE:
+            glob_pattern = str(folder / "*.xlsx")
+        case Mode.STACK:
+            glob_pattern = str(folder / "**" / "*.xlsx")
+        case _:
+            print("This is unexpected.") # Can never happen
 
     return glob_pattern

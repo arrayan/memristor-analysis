@@ -1,7 +1,5 @@
 from enum import Enum, auto
-from pathlib import Path
-from converter import BatchConverter
-class MenuActions(Enum):
+class MenuAction(Enum):
     # FILE MENU
     # IMPORT
     IMPORT_DEVICE = ("Device", "Ctrl+O")
@@ -28,7 +26,3 @@ class MenuActions(Enum):
     def __init__(self, text, shortcut=None):
         self.text = text
         self.shortcut = shortcut
-
-    # def import_device(self, device_path: str):
-    #     converter = BatchConverter("output.duckdb")
-    #     converter.convert(device_path)

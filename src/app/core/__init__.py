@@ -1,3 +1,5 @@
-from .actions import MenuActions
+from .actions import MenuAction
+from .modes import Mode
 
-__all__ = ["MenuActions"]
+__all__ = ["MenuAction",
+           "Mode"]
