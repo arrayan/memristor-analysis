@@ -2,10 +2,9 @@ import PySide6.QtWidgets as qt
 from PySide6.QtCore import Qt
 from .navigation_bar import NavigationBar
 from .menu_bar import MenuBar
-from core import MenuActions
+from core import MenuAction, Mode
 from converter import BatchConverter, path_to_glob
 from pathlib import Path
-import subprocess
 
 class MainWindow(qt.QMainWindow):
     def __init__(self):
@@ -49,18 +48,18 @@ class MainWindow(qt.QMainWindow):
     def setup_connections(self):
         menu_actions = self.menu_bar.menu_actions
 
-        menu_actions[MenuActions.EXIT].triggered.connect(self.close)
+        menu_actions[MenuAction.EXIT].triggered.connect(self.close)
 
-        menu_actions[MenuActions.IMPORT_DEVICE].triggered.connect(
-            lambda: self.handle_import(mode="device")
+        menu_actions[MenuAction.IMPORT_DEVICE].triggered.connect(
+            lambda: self.handle_import(mode=Mode.DEVICE)
         )
-        menu_actions[MenuActions.IMPORT_STACK].triggered.connect(
-            lambda: self.handle_import(mode="stack")
+        menu_actions[MenuAction.IMPORT_STACK].triggered.connect(
+            lambda: self.handle_import(mode=Mode.STACK)
         )
 
-    def handle_import(self, mode: str): # TODO connect to converter
+    def handle_import(self, mode: Mode): # TODO connect to converter
         # Set Window Title
-        title = f"Select {mode.capitalize} Folder"
+        title = f"Select {mode.value.capitalize} Folder"
 
         # Get path to import directory
         folder = qt.QFileDialog.getExistingDirectory(self, title)
@@ -69,7 +68,7 @@ class MainWindow(qt.QMainWindow):
         if not folder:
             return
         
-        path = path_to_glob(folder)
+        path = path_to_glob(folder, mode)
         
         # Set up Converter
         converter = BatchConverter("output.duckdb")
