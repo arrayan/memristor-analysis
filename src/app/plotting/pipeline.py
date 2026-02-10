@@ -11,12 +11,14 @@ from plotting.transforms import (
     build_box_table,
     build_endurance_table,
     build_scatter_table,
+    build_stack_correlation_table,
 )
 
 
 @dataclass(frozen=True)
 class LoadedData:
     sets: list[str]
+    stacks: list[str]
 
     # raw
     raw_characteristic: dict[str, pd.DataFrame]  # cycle_number, Time, AV, AI, NORM_COND
@@ -31,6 +33,7 @@ class LoadedData:
     box_table: pd.DataFrame
     end_df: pd.DataFrame
     scatter_df: pd.DataFrame
+    stack_corr_df: pd.DataFrame  # NEU
 
 
 def load_all(cfg: Config) -> LoadedData:
@@ -38,6 +41,7 @@ def load_all(cfg: Config) -> LoadedData:
         repo = MemristorRepository(conn)
 
         sets = repo.list_endurance_sets(cfg.endurance_set_like)
+        stacks = repo.list_stacks()  # NEU
 
         # raw for characteristic plot
         raw_characteristic = {s: repo.load_cycles_for_set(s) for s in sets}
@@ -48,6 +52,9 @@ def load_all(cfg: Config) -> LoadedData:
         forming_v = repo.load_forming_voltage_global(cfg.electroforming_like)
         classic = repo.load_classic_cycle_params_for_sets(sets)
 
+        # NEU: Stack correlation data (loaded within DB session)
+        stack_corr_df = build_stack_correlation_table(stacks, repo) if stacks else pd.DataFrame()
+
     # transforms (no DB needed)
     cdf_table = build_cdf_table(classic, raw_characteristic, forming_v)
     box_table = build_box_table(classic, raw_characteristic, forming_v)
@@ -56,6 +63,7 @@ def load_all(cfg: Config) -> LoadedData:
 
     return LoadedData(
         sets=sets,
+        stacks=stacks,  # NEU
         raw_characteristic=raw_characteristic,
         raw_endurance=raw_endurance,
         forming_v=forming_v,
@@ -64,4 +72,5 @@ def load_all(cfg: Config) -> LoadedData:
         box_table=box_table,
         end_df=end_df,
         scatter_df=scatter_df,
+        stack_corr_df=stack_corr_df,  # NEU
     )

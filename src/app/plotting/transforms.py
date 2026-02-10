@@ -155,3 +155,70 @@ def build_scatter_table(end_df: pd.DataFrame) -> pd.DataFrame:
     df["R_LRS"] = df["V_set"] / df["I_LRS"].abs().replace(0, np.nan)
 
     return df
+
+def build_stack_correlation_table(
+        stacks: list[str],
+        repo: "MemristorRepository",  # Type hint als String für Forward Reference
+) -> pd.DataFrame:
+    """
+    Build stack-level correlation table.
+    One row per device with aggregated metrics.
+
+    Returns DataFrame with columns:
+    - stack_id, device_id
+    - V_set_median, V_set_mean, V_reset_median, V_reset_mean
+    - I_HRS_median, I_HRS_mean, I_LRS_median, I_LRS_mean
+    - R_HRS_median, R_HRS_mean, R_LRS_median, R_LRS_mean
+    - I_reset_max
+    - V_forming, first_V_reset
+    - I_leakage_pristine, V_read, R_pristine
+    """
+    all_devices = []
+
+    for stack_id in stacks:
+        # Load endurance summary per device
+        end_summary = repo.load_endurance_summary_by_device(stack_id)
+        if end_summary.empty:
+            continue
+
+        # Load forming data
+        forming_data = repo.load_forming_data_by_device(stack_id)
+
+        # Load first reset data
+        first_reset = repo.load_first_reset_by_device(stack_id)
+
+        # Load leakage data
+        leakage_data = repo.load_leakage_data_by_device(stack_id)
+
+        # Merge all data on device_id
+        device_df = end_summary.copy()
+        device_df["stack_id"] = stack_id
+
+        if not forming_data.empty:
+            device_df = device_df.merge(
+                forming_data[["device_id", "V_forming"]],
+                on="device_id",
+                how="left"
+            )
+
+        if not first_reset.empty:
+            device_df = device_df.merge(
+                first_reset[["device_id", "first_V_reset"]],
+                on="device_id",
+                how="left"
+            )
+
+        if not leakage_data.empty:
+            # leakage_data already has I_leakage_pristine, V_read, R_pristine
+            device_df = device_df.merge(
+                leakage_data[["device_id", "I_leakage_pristine", "V_read", "R_pristine"]],
+                on="device_id",
+                how="left"
+            )
+
+        all_devices.append(device_df)
+
+    if not all_devices:
+        return pd.DataFrame()
+
+    return pd.concat(all_devices, ignore_index=True)

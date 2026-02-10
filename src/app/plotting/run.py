@@ -8,6 +8,7 @@ from plotting.fig_cdf import build_cdf_fig
 from plotting.fig_boxplots import build_boxplots_fig
 from plotting.fig_endurance import build_endurance_fig
 from plotting.fig_correlation import build_correlation_scatter_fig
+from plotting.fig_correlation_stack import build_stack_correlation_fig  # NEU
 
 
 def _write(fig, out_path) -> None:
@@ -35,9 +36,17 @@ def main() -> None:
     fig = build_endurance_fig(data.end_df, data.sets)
     _write(fig, cfg.output_dir / cfg.endurance_html)
 
-    #  Correlation scatter
+    #  Correlation scatter (device-level)
     fig = build_correlation_scatter_fig(data.scatter_df, data.sets)
     _write(fig, cfg.output_dir / cfg.correlation_html)
+
+    #  NEU: Stack correlation (stack-level)
+    if not data.stack_corr_df.empty and data.stacks:
+        fig = build_stack_correlation_fig(data.stack_corr_df, data.stacks)
+        _write(fig, cfg.output_dir / "stack_correlation.html")
+        print("Generated stack correlation plot for stacks:", data.stacks)
+    else:
+        print("No stack data available for correlation plot")
 
 
 if __name__ == "__main__":

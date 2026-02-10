@@ -73,7 +73,7 @@ def build_characteristic_fig(
         type="log",
         tickmode="array",
         tickvals=dticks,
-        ticktext=[f"1×10<sup>{int(np.log10(d))}</sup>" for d in dticks],
+        ticktext=[f"1x10<sup>{int(np.log10(d))}</sup>" for d in dticks],
         title="AI (A)",
     )
 
@@ -154,7 +154,7 @@ def build_characteristic_fig(
                 yanchor="top",
             ),
         ],
-        title=f"{sets[0]} – AI vs AV",
+        title=f"{sets[0]} - AI vs AV",
         width=900,
         height=600,
     )
