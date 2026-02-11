@@ -8,7 +8,8 @@ from plotting.fig_cdf import build_cdf_fig
 from plotting.fig_boxplots import build_boxplots_fig
 from plotting.fig_endurance import build_endurance_fig
 from plotting.fig_correlation import build_correlation_scatter_fig
-from plotting.fig_correlation_stack import build_stack_correlation_fig  # NEU
+from plotting.fig_correlation_stack import build_stack_correlation_fig
+from plotting.fig_correlation_matrix import build_correlation_matrix_fig, build_combined_correlation_matrix_fig
 
 
 def _write(fig, out_path) -> None:
@@ -40,13 +41,22 @@ def main() -> None:
     fig = build_correlation_scatter_fig(data.scatter_df, data.sets)
     _write(fig, cfg.output_dir / cfg.correlation_html)
 
-    #  NEU: Stack correlation (stack-level)
+    #  Stack correlation (stack-level)
     if not data.stack_corr_df.empty and data.stacks:
         fig = build_stack_correlation_fig(data.stack_corr_df, data.stacks)
         _write(fig, cfg.output_dir / "stack_correlation.html")
         print("Generated stack correlation plot for stacks:", data.stacks)
     else:
         print("No stack data available for correlation plot")
+
+        # Stack correlation matrix (per stack)
+    if not data.stack_corr_df.empty and data.stacks:
+        fig = build_correlation_matrix_fig(data.stack_corr_df, data.stacks)
+        _write(fig, cfg.output_dir / "stack_correlation_matrix.html")
+
+        # Combined matrix (all stacks)
+        fig = build_combined_correlation_matrix_fig(data.stack_corr_df)
+        _write(fig, cfg.output_dir / "correlation_matrix_combined.html")
 
 
 if __name__ == "__main__":

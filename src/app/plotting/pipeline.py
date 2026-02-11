@@ -11,20 +11,18 @@ from plotting.transforms import (
     build_box_table,
     build_endurance_table,
     build_scatter_table,
-    build_stack_correlation_table,
+    build_stack_correlation_table,  # NEU
 )
 
 
 @dataclass(frozen=True)
 class LoadedData:
     sets: list[str]
-    stacks: list[str]
+    stacks: list[str]  # NEU
 
     # raw
-    raw_characteristic: dict[str, pd.DataFrame]  # cycle_number, Time, AV, AI, NORM_COND
-    raw_endurance: dict[
-        str, pd.DataFrame
-    ]  # cycle_number, Time, AV, AI, VSET, ILRS, IHRS
+    raw_characteristic: dict[str, pd.DataFrame]
+    raw_endurance: dict[str, pd.DataFrame]
 
     # derived
     forming_v: float | None
