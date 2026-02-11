@@ -1,7 +1,8 @@
 import PySide6.QtWidgets as qt
 from PySide6.QtCore import Qt
-from .navigation_bar import NavigationBar
 from .menu_bar import MenuBar
+from .navigation_bar import NavigationBar
+from .plot_viewer import PlotViewer
 from core import MenuAction, Mode
 from converter import BatchConverter, path_to_glob
 
@@ -19,6 +20,7 @@ class MainWindow(qt.QMainWindow):
         # Connect Buttons
         self.setup_connections()
 
+        self.plot_viewer.load_html_file("C:/Users/pineapple/Desktop/repos/memristor-analysis/characteristic_plots.html")
         
         
     def setup_ui(self) -> None:
@@ -37,12 +39,8 @@ class MainWindow(qt.QMainWindow):
         
         
         # Plot Area
-        self.plot_area = qt.QFrame()
-        self.plot_area.setStyleSheet("background-color: #000; border: 2px solid #444;")
-        plot_layout = qt.QVBoxLayout(self.plot_area)
-        plot_layout.addWidget(qt.QLabel("Plot Canvas Area", alignment=Qt.AlignmentFlag.AlignCenter))
-
-        self.main_layout.addWidget(self.plot_area, stretch=1)
+        self.plot_viewer = PlotViewer()
+        self.main_layout.addWidget(self.plot_viewer, stretch=1)
 
     def setup_connections(self):
         menu_actions = self.menu_bar.menu_actions
@@ -55,6 +53,24 @@ class MainWindow(qt.QMainWindow):
         menu_actions[MenuAction.IMPORT_STACK].triggered.connect(
             lambda: self.handle_import(mode=Mode.STACK)
         )
+
+        menu_actions[MenuAction.SCALE_LINEAR].triggered.connect(
+            lambda: self.plot_viewer.set_scale("linear")
+        )
+        menu_actions[MenuAction.SCALE_LOG].triggered.connect(
+            lambda: self.plot_viewer.set_scale("log")
+        )
+
+
+        # Since your PlotViewer.export_image opens a dialog, 
+        # we can connect several actions to the same generic function.
+        menu_actions[MenuAction.EXPORT_CURRENT_PNG].triggered.connect(self.plot_viewer.export_image)
+        menu_actions[MenuAction.EXPORT_CURRENT_JPEG].triggered.connect(self.plot_viewer.export_image)
+        
+        # If you want to bypass the dialog and export directly based on the menu click:
+        # actions[MenuAction.EXPORT_CURRENT_PNG].triggered.connect(
+        #     lambda: self.plot_viewer.figure.write_image("quick_export.png")
+        # )
 
     def handle_import(self, mode: Mode): # TODO connect to converter
         # Set Window Title
