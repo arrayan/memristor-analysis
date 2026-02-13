@@ -15,3 +15,4 @@ __pycache__/
 .vscode/
 output/
 *.html
+testing_recources/
