@@ -6,12 +6,13 @@ from core import MenuAction, Mode
 from converter import BatchConverter, path_to_glob
 from .import_worker import ImportWorker
 
+
 class MainWindow(qt.QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Memristor Analysis Tool")
         self.resize(1200, 800)
-        self.setup_ui()        
+        self.setup_ui()
         self.setup_connections()
 
     def setup_ui(self) -> None:
@@ -25,7 +26,7 @@ class MainWindow(qt.QMainWindow):
 
     def setup_connections(self):
         menu_actions = self.menu_bar.menu_actions
-        
+
         # Connect Imports (Shortcuts and Menu)
         menu_actions[MenuAction.IMPORT_DEVICE].triggered.connect(
             lambda: self.handle_import(mode=Mode.DEVICE)
@@ -43,7 +44,9 @@ class MainWindow(qt.QMainWindow):
         )
 
     def handle_import(self, mode: Mode):
-        folder = qt.QFileDialog.getExistingDirectory(self, f"Select {mode.value} Folder")
+        folder = qt.QFileDialog.getExistingDirectory(
+            self, f"Select {mode.value} Folder"
+        )
         if not folder:
             return
 
@@ -65,12 +68,12 @@ class MainWindow(qt.QMainWindow):
         self.import_thread.started.connect(self.worker.run)
         self.worker.progress.connect(self.pd.setValue)
         self.worker.status_message.connect(self.pd.setLabelText)
-        
+
         # Clean up thread when finished
         self.worker.finished.connect(self.import_thread.quit)
         self.worker.finished.connect(self.worker.deleteLater)
         self.import_thread.finished.connect(self.import_thread.deleteLater)
-        
+
         # UI Refresh on success
         self.worker.finished.connect(self.on_import_success)
         self.worker.error.connect(self.on_import_error)
@@ -83,11 +86,15 @@ class MainWindow(qt.QMainWindow):
         # Force the NavigationBar to reload the tabs (which now have new HTML files)
         self.nav_bar.level_dropdown.setCurrentText("Device Level")
         self.nav_bar.update_tabs_by_level("Device Level")
-        qt.QMessageBox.information(self, "Success", "Data imported and plots generated successfully.")
+        qt.QMessageBox.information(
+            self, "Success", "Data imported and plots generated successfully."
+        )
 
     def on_import_error(self, err_msg):
         self.pd.close()
-        qt.QMessageBox.critical(self, "Error", f"An error occurred during processing:\n{err_msg}")
+        qt.QMessageBox.critical(
+            self, "Error", f"An error occurred during processing:\n{err_msg}"
+        )
 
     def apply_to_active(self, callback):
         viewer = self.nav_bar.get_current_viewer()

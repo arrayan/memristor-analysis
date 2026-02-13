@@ -3,12 +3,13 @@ from PySide6.QtWidgets import QVBoxLayout, QWidget, QFileDialog
 from PySide6.QtCore import QUrl
 import os
 
+
 class PlotViewer(QWidget):
     def __init__(self, figure=None):
         super().__init__()
         self.figure = figure
         self.main_layout = QVBoxLayout(self)
-        self.main_layout.setContentsMargins(0, 0, 0, 0) # Remove padding
+        self.main_layout.setContentsMargins(0, 0, 0, 0)  # Remove padding
 
         self.browser = QWebEngineView()
         self.main_layout.addWidget(self.browser)
@@ -18,12 +19,14 @@ class PlotViewer(QWidget):
 
     def render_plot(self):
         if self.figure is not None:
-            # Note: include_plotlyjs='cdn' requires internet. 
+            # Note: include_plotlyjs='cdn' requires internet.
             # Use 'require' or True for offline use.
-            html = self.figure.to_html(include_plotlyjs='cdn', full_html=False)
+            html = self.figure.to_html(include_plotlyjs="cdn", full_html=False)
             self.browser.setHtml(html)
         else:
-            self.browser.setHtml("<html><body style='background:#111; color:#555; display:flex; justify-content:center; align-items:center; height:100vh; font-family:sans-serif;'><div>No plot data available.</div></body></html>")
+            self.browser.setHtml(
+                "<html><body style='background:#111; color:#555; display:flex; justify-content:center; align-items:center; height:100vh; font-family:sans-serif;'><div>No plot data available.</div></body></html>"
+            )
 
     def load_html_file(self, file_path: str):
         """
@@ -35,7 +38,7 @@ class PlotViewer(QWidget):
             self.browser.load(local_url)
         else:
             print(f"Error: File not found at {file_path}")
-    
+
     def set_scale(self, scale_type: str):
         """Sets the y-axis scale: 'log' or 'linear'"""
         if self.figure is not None:

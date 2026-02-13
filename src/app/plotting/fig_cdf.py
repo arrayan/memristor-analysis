@@ -47,7 +47,9 @@ def build_cdf_fig(cdf_table: "pd.DataFrame", sets: list[str]) -> go.Figure:
     for param in param_map.keys():
         for s in sets:
             df_s = cdf_table[cdf_table["source_file"] == s]
-            x, y = _cdf_xy(df_s[param] if param in df_s.columns else pd.Series(dtype=float))
+            x, y = _cdf_xy(
+                df_s[param] if param in df_s.columns else pd.Series(dtype=float)
+            )
             fig.add_trace(
                 go.Scatter(
                     x=x,
@@ -69,7 +71,10 @@ def build_cdf_fig(cdf_table: "pd.DataFrame", sets: list[str]) -> go.Figure:
         tr.visible = (tr.meta["param"] == first_param) and (tr.meta["set"] == first_set)
 
     def vis_for(param_val: str, set_val: str) -> list[bool]:
-        return [(tr.meta["param"] == param_val) and (tr.meta["set"] == set_val) for tr in fig.data]
+        return [
+            (tr.meta["param"] == param_val) and (tr.meta["set"] == set_val)
+            for tr in fig.data
+        ]
 
     # parameter dropdown (preserve currently selected set)
     param_buttons = []
@@ -108,8 +113,24 @@ def build_cdf_fig(cdf_table: "pd.DataFrame", sets: list[str]) -> go.Figure:
 
     fig.update_layout(
         updatemenus=[
-            dict(buttons=param_buttons, direction="down", showactive=True, x=1.02, xanchor="left", y=1.15, yanchor="top"),
-            dict(buttons=set_buttons, direction="down", showactive=True, x=1.02, xanchor="left", y=1.05, yanchor="top"),
+            dict(
+                buttons=param_buttons,
+                direction="down",
+                showactive=True,
+                x=1.02,
+                xanchor="left",
+                y=1.15,
+                yanchor="top",
+            ),
+            dict(
+                buttons=set_buttons,
+                direction="down",
+                showactive=True,
+                x=1.02,
+                xanchor="left",
+                y=1.05,
+                yanchor="top",
+            ),
         ],
         title=f"CDF – {param_map[first_param]['pretty']} ({first_set})",
         xaxis_title=param_map[first_param]["pretty"],

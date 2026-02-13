@@ -78,13 +78,26 @@ def build_endurance_fig(end_df: "pd.DataFrame", sets: list[str]) -> go.Figure:
                 method="update",
                 args=[
                     {"visible": vis_for(param)},
-                    {"title": f"Endurance – {info['pretty']}", "yaxis.title.text": info["pretty"]},
+                    {
+                        "title": f"Endurance – {info['pretty']}",
+                        "yaxis.title.text": info["pretty"],
+                    },
                 ],
             )
         )
 
     fig.update_layout(
-        updatemenus=[dict(buttons=buttons, direction="down", showactive=True, x=1.02, xanchor="left", y=1.15, yanchor="top")],
+        updatemenus=[
+            dict(
+                buttons=buttons,
+                direction="down",
+                showactive=True,
+                x=1.02,
+                xanchor="left",
+                y=1.15,
+                yanchor="top",
+            )
+        ],
         title=f"Endurance – {param_map[first_param]['pretty']}",
         xaxis_title="Cycle Number",
         yaxis_title=param_map[first_param]["pretty"],

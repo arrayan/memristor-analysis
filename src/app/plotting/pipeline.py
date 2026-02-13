@@ -19,8 +19,10 @@ class LoadedData:
     sets: list[str]
 
     # raw
-    raw_characteristic: dict[str, pd.DataFrame]   # cycle_number, Time, AV, AI, NORM_COND
-    raw_endurance: dict[str, pd.DataFrame]        # cycle_number, Time, AV, AI, VSET, ILRS, IHRS
+    raw_characteristic: dict[str, pd.DataFrame]  # cycle_number, Time, AV, AI, NORM_COND
+    raw_endurance: dict[
+        str, pd.DataFrame
+    ]  # cycle_number, Time, AV, AI, VSET, ILRS, IHRS
 
     # derived
     forming_v: float | None

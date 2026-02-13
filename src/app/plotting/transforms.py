@@ -15,7 +15,11 @@ def compute_v_reset(df_set: pd.DataFrame) -> pd.DataFrame:
 
     # idx of max abs(AI) per cycle
     idx = df_set.groupby("cycle_number")["AI"].apply(lambda s: s.abs().idxmax())
-    out = df_set.loc[idx, ["cycle_number", "AV"]].rename(columns={"AV": "V_reset"}).reset_index(drop=True)
+    out = (
+        df_set.loc[idx, ["cycle_number", "AV"]]
+        .rename(columns={"AV": "V_reset"})
+        .reset_index(drop=True)
+    )
     return out
 
 
@@ -58,14 +62,20 @@ def build_cdf_table(
         i["source_file"] = s
         parts_i.append(i)
 
-    vreset_df = pd.concat(parts_v, ignore_index=True) if parts_v else pd.DataFrame(columns=["cycle_number", "V_reset", "source_file"])
-    ireset_df = pd.concat(parts_i, ignore_index=True) if parts_i else pd.DataFrame(columns=["cycle_number", "I_reset_max", "source_file"])
-
-    out = (
-        classic_df
-        .merge(vreset_df, on=["source_file", "cycle_number"], how="left")
-        .merge(ireset_df, on=["source_file", "cycle_number"], how="left")
+    vreset_df = (
+        pd.concat(parts_v, ignore_index=True)
+        if parts_v
+        else pd.DataFrame(columns=["cycle_number", "V_reset", "source_file"])
     )
+    ireset_df = (
+        pd.concat(parts_i, ignore_index=True)
+        if parts_i
+        else pd.DataFrame(columns=["cycle_number", "I_reset_max", "source_file"])
+    )
+
+    out = classic_df.merge(
+        vreset_df, on=["source_file", "cycle_number"], how="left"
+    ).merge(ireset_df, on=["source_file", "cycle_number"], how="left")
     out["V_forming"] = v_forming_global
     return out
 
@@ -128,7 +138,17 @@ def build_scatter_table(end_df: pd.DataFrame) -> pd.DataFrame:
     if end_df.empty:
         return pd.DataFrame()
 
-    df = end_df[["source_file", "cycle_number", "V_set", "V_reset", "I_HRS", "I_LRS", "I_reset_max"]].copy()
+    df = end_df[
+        [
+            "source_file",
+            "cycle_number",
+            "V_set",
+            "V_reset",
+            "I_HRS",
+            "I_LRS",
+            "I_reset_max",
+        ]
+    ].copy()
 
     # avoid division by zero
     df["R_HRS"] = df["V_set"] / df["I_HRS"].abs().replace(0, np.nan)
