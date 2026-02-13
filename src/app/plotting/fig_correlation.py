@@ -5,7 +5,9 @@ import plotly.graph_objects as go
 import plotly.express as px
 
 
-def build_correlation_scatter_fig(scatter_df: "pd.DataFrame", sets: list[str]) -> go.Figure:
+def build_correlation_scatter_fig(
+    scatter_df: "pd.DataFrame", sets: list[str]
+) -> go.Figure:
     """
     Device-level correlation scatter plots.
     Two dropdowns: pair + set.
@@ -53,10 +55,19 @@ def build_correlation_scatter_fig(scatter_df: "pd.DataFrame", sets: list[str]) -
 
     # default visibility
     for tr in fig.data:
-        tr.visible = (tr.meta["x"] == first_pair[0]) and (tr.meta["y"] == first_pair[1]) and (tr.meta["set"] == first_set)
+        tr.visible = (
+            (tr.meta["x"] == first_pair[0])
+            and (tr.meta["y"] == first_pair[1])
+            and (tr.meta["set"] == first_set)
+        )
 
     def vis_for(x_col: str, y_col: str, set_val: str) -> list[bool]:
-        return [(tr.meta["x"] == x_col) and (tr.meta["y"] == y_col) and (tr.meta["set"] == set_val) for tr in fig.data]
+        return [
+            (tr.meta["x"] == x_col)
+            and (tr.meta["y"] == y_col)
+            and (tr.meta["set"] == set_val)
+            for tr in fig.data
+        ]
 
     # Pair dropdown (keep current set)
     pair_buttons = []
@@ -67,7 +78,11 @@ def build_correlation_scatter_fig(scatter_df: "pd.DataFrame", sets: list[str]) -
                 method="update",
                 args=[
                     {"visible": vis_for(x_col, y_col, first_set)},
-                    {"xaxis.title.text": x_col, "yaxis.title.text": y_col, "title": f"{title} – {first_set}"},
+                    {
+                        "xaxis.title.text": x_col,
+                        "yaxis.title.text": y_col,
+                        "title": f"{title} – {first_set}",
+                    },
                 ],
             )
         )
@@ -89,8 +104,24 @@ def build_correlation_scatter_fig(scatter_df: "pd.DataFrame", sets: list[str]) -
 
     fig.update_layout(
         updatemenus=[
-            dict(buttons=pair_buttons, direction="down", showactive=True, x=1.02, y=1.15, xanchor="left", yanchor="top"),
-            dict(buttons=set_buttons, direction="down", showactive=True, x=1.02, y=1.05, xanchor="left", yanchor="top"),
+            dict(
+                buttons=pair_buttons,
+                direction="down",
+                showactive=True,
+                x=1.02,
+                y=1.15,
+                xanchor="left",
+                yanchor="top",
+            ),
+            dict(
+                buttons=set_buttons,
+                direction="down",
+                showactive=True,
+                x=1.02,
+                y=1.05,
+                xanchor="left",
+                yanchor="top",
+            ),
         ],
         title=f"{first_pair[2]} – {first_set}",
         xaxis_title=first_pair[0],

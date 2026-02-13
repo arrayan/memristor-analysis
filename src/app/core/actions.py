@@ -1,4 +1,6 @@
 from enum import Enum
+
+
 class MenuAction(Enum):
     # FILE MENU
     # IMPORT
@@ -10,7 +12,7 @@ class MenuAction(Enum):
     EXPORT_ALL_PNG = ("PNG", None, False)
     EXPORT_ALL_JPEG = ("JPEG", None, False)
     EXPORT_ALL_APS = ("APS", None, False)
-    
+
     EXPORT_CURRENT = ("Current", "Ctrl+E", False)
     EXPORT_CURRENT_PNG = ("PNG", None, False)
     EXPORT_CURRENT_JPEG = ("JPEG", None, False)
@@ -22,7 +24,7 @@ class MenuAction(Enum):
     # OPTIONS MENU
     SCALE_LINEAR = ("linear", None, True)
     SCALE_LOG = ("log", None, True)
-    
+
     # HELP MENU
     VIEW_HELP = ("View Help", "F1", False)
     ABOUT = ("About", None, False)

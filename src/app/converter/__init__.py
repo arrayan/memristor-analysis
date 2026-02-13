@@ -89,5 +89,5 @@ __all__ = [
     "convert_single",
     "export_to_parquet",
     "query_db",
-    "path_to_glob"
+    "path_to_glob",
 ]

@@ -1,18 +1,20 @@
 from __future__ import annotations
-
+import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
 import plotly.express as px
-#TODO Create plotting/fig_cdf.py
+# TODO Create plotting/fig_cdf.py
 
-#plotting/fig_boxplots.py
+# plotting/fig_boxplots.py
 
-#plotting/fig_endurance.py
+# plotting/fig_endurance.py
 
-#plotting/fig_correlation.py
+# plotting/fig_correlation.py
 
 
-def build_characteristic_fig(raw_by_set: dict[str, "pd.DataFrame"], sets: list[str]) -> go.Figure:
+def build_characteristic_fig(
+    raw_by_set: dict[str, "pd.DataFrame"], sets: list[str]
+) -> go.Figure:
     """
     AI / NORM_COND vs AV per cycle, with dropdowns:
       - Y: AI (log) or NORM_COND (linear)
@@ -60,7 +62,9 @@ def build_characteristic_fig(raw_by_set: dict[str, "pd.DataFrame"], sets: list[s
         tr.visible = (tr.meta["y"] == "AI") and (tr.meta["set"] == sets[0])
 
     def build_vis(y_val: str, set_val: str) -> list[bool]:
-        return [(tr.meta["y"] == y_val and tr.meta["set"] == set_val) for tr in fig.data]
+        return [
+            (tr.meta["y"] == y_val and tr.meta["set"] == set_val) for tr in fig.data
+        ]
 
     # axis templates
     # AI axis (log)
@@ -76,7 +80,11 @@ def build_characteristic_fig(raw_by_set: dict[str, "pd.DataFrame"], sets: list[s
     # NORM_COND axis (linear, dynamic range across all sets)
     norm_min = min(raw_by_set[s]["NORM_COND"].min(skipna=True) for s in sets)
     norm_max = max(raw_by_set[s]["NORM_COND"].max(skipna=True) for s in sets)
-    norm_min = 0 if (pd.notna(norm_min) and norm_min < 0) else (0 if pd.isna(norm_min) else float(norm_min))
+    norm_min = (
+        0
+        if (pd.notna(norm_min) and norm_min < 0)
+        else (0 if pd.isna(norm_min) else float(norm_min))
+    )
     norm_max = 5 if pd.isna(norm_max) else float(np.ceil(norm_max / 5) * 5)
 
     yaxis_norm = dict(
@@ -127,10 +135,24 @@ def build_characteristic_fig(raw_by_set: dict[str, "pd.DataFrame"], sets: list[s
 
     fig.update_layout(
         updatemenus=[
-            dict(buttons=y_buttons, direction="down", showactive=True,
-                 x=1.02, xanchor="left", y=1.15, yanchor="top"),
-            dict(buttons=set_buttons, direction="down", showactive=True,
-                 x=1.02, xanchor="left", y=1.05, yanchor="top"),
+            dict(
+                buttons=y_buttons,
+                direction="down",
+                showactive=True,
+                x=1.02,
+                xanchor="left",
+                y=1.15,
+                yanchor="top",
+            ),
+            dict(
+                buttons=set_buttons,
+                direction="down",
+                showactive=True,
+                x=1.02,
+                xanchor="left",
+                y=1.05,
+                yanchor="top",
+            ),
         ],
         title=f"{sets[0]} – AI vs AV",
         width=900,

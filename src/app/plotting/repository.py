@@ -11,6 +11,7 @@ class MemristorRepository:
     Data access layer: SQL -> pandas DataFrames.
     No plotting, no transforms (groupby/apply/merge) beyond what SQL returns.
     """
+
     conn: duckdb.DuckDBPyConnection
 
     def list_endurance_sets(self, endurance_like: str = "%endurance set%") -> list[str]:
@@ -24,7 +25,7 @@ class MemristorRepository:
             [endurance_like],
         ).fetchall()
         return [r[0] for r in rows]
-    
+
     def load_endurance_cycles_for_set(self, source_file: str) -> pd.DataFrame:
         """
         Raw data needed for endurance/end_df/scatter:
@@ -52,7 +53,9 @@ class MemristorRepository:
             [source_file],
         ).df()
 
-    def load_forming_voltage_global(self, electroforming_like: str = "%Electroforming%") -> float | None:
+    def load_forming_voltage_global(
+        self, electroforming_like: str = "%Electroforming%"
+    ) -> float | None:
         df = self.conn.execute(
             """
             SELECT MAX(VFORM) AS V_forming_global
@@ -74,7 +77,9 @@ class MemristorRepository:
         Per (source_file, cycle_number) classic params used by CDF/boxplots.
         """
         if not sets:
-            return pd.DataFrame(columns=["source_file", "cycle_number", "VSET", "R_LRS", "R_HRS"])
+            return pd.DataFrame(
+                columns=["source_file", "cycle_number", "VSET", "R_LRS", "R_HRS"]
+            )
 
         return self.conn.execute(
             """

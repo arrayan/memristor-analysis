@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 import plotly.express as px
@@ -37,7 +36,11 @@ def build_boxplots_fig(box_table: "pd.DataFrame", sets: list[str]) -> go.Figure:
     for param in param_map.keys():
         for s in sets:
             df_s = box_table[box_table["source_file"] == s]
-            vals = pd.to_numeric(df_s[param], errors="coerce").dropna() if param in df_s.columns else pd.Series(dtype=float)
+            vals = (
+                pd.to_numeric(df_s[param], errors="coerce").dropna()
+                if param in df_s.columns
+                else pd.Series(dtype=float)
+            )
             if vals.empty:
                 # still create an “empty” trace so visibility logic stays consistent
                 fig.add_trace(
@@ -75,13 +78,26 @@ def build_boxplots_fig(box_table: "pd.DataFrame", sets: list[str]) -> go.Figure:
                 method="update",
                 args=[
                     {"visible": vis_for(param)},
-                    {"title": f"Boxplot – {info['pretty']}", "yaxis.title.text": info["pretty"]},
+                    {
+                        "title": f"Boxplot – {info['pretty']}",
+                        "yaxis.title.text": info["pretty"],
+                    },
                 ],
             )
         )
 
     fig.update_layout(
-        updatemenus=[dict(buttons=buttons, direction="down", showactive=True, x=1.02, xanchor="left", y=1.15, yanchor="top")],
+        updatemenus=[
+            dict(
+                buttons=buttons,
+                direction="down",
+                showactive=True,
+                x=1.02,
+                xanchor="left",
+                y=1.15,
+                yanchor="top",
+            )
+        ],
         title=f"Boxplot – {param_map[first_param]['pretty']}",
         xaxis_title="Set / File",
         yaxis_title=param_map[first_param]["pretty"],
