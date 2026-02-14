@@ -54,7 +54,7 @@ class ExcelFileProcessor:
                     all_cycles.append(df)
 
             if all_cycles:  # diagonal concatenation
-                result.cycles_df = pl.concat(all_cycles, how="diagonal")
+                result.cycles_df = pl.concat(all_cycles, how="diagonal_relaxed")
 
             # Process metadata sheets
             for sheet_name in other_sheets:
