@@ -69,7 +69,12 @@ class BatchConverter:
         for f in files:
             if f.name.startswith("~$"):
                 continue
-            if not MetadataExtractor.FILENAME_PATTERN.match(f.name):
+            filename_match = MetadataExtractor.FILENAME_PATTERN.match(f.name)
+            if not filename_match:
+                skipped.append(f.name)
+                continue
+            raw_type = filename_match.group(2).lower().strip()
+            if raw_type not in MetadataExtractor.TYPE_MAP:
                 skipped.append(f.name)
                 continue
             valid.append(f)
