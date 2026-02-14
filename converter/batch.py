@@ -7,6 +7,7 @@ import concurrent.futures
 from typing import Optional
 from .models import ProcessingResult
 from .file_processor import ExcelFileProcessor
+from .metadata import MetadataExtractor
 from .writer import DuckDBWriter
 
 
@@ -62,8 +63,23 @@ class BatchConverter:
         else:
             files = [Path(p) for p in input_pattern]
 
-        # Filter out temp files
-        return [f for f in files if not f.name.startswith("~$")]
+        # Filter out temp files and files not matching expected naming convention
+        valid = []
+        skipped = []
+        for f in files:
+            if f.name.startswith("~$"):
+                continue
+            if not MetadataExtractor.FILENAME_PATTERN.match(f.name):
+                skipped.append(f.name)
+                continue
+            valid.append(f)
+
+        if skipped:
+            print(f"Skipped {len(skipped)} file(s) with non-standard names:")
+            for name in skipped:
+                print(f"  - {name}")
+
+        return valid
 
     def _process_files(
         self,
