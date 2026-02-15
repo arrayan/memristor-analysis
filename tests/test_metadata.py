@@ -2,16 +2,20 @@ import pytest
 from converter.metadata import MetadataExtractor
 
 ext = MetadataExtractor()
-@pytest.mark.parametrize("filename, expected", [
-    ("01 set.xlsx", "set"),
-    ("02 reset.xlsx", "reset"),
-    ("03 leakage.xlsx", "leakage"),
-    ("04 electroforming.xlsx", "electroforming"),
-    ("05 endurance reset.xlsx", "endurance_reset"),
-    ("06 endurance set.xlsx", "endurance_set"),
-    ("07 endurance ratio.xlsx", "endurance_ratio"),
-])
 
+
+@pytest.mark.parametrize(
+    "filename, expected",
+    [
+        ("01 set.xlsx", "set"),
+        ("02 reset.xlsx", "reset"),
+        ("03 leakage.xlsx", "leakage"),
+        ("04 electroforming.xlsx", "electroforming"),
+        ("05 endurance reset.xlsx", "endurance_reset"),
+        ("06 endurance set.xlsx", "endurance_set"),
+        ("07 endurance ratio.xlsx", "endurance_ratio"),
+    ],
+)
 def test_all_known_measurement_types(make_file, filename, expected):
     f = make_file(filename=filename)
     assert ext.extract(f).measurement_type == expected
@@ -19,7 +23,9 @@ def test_all_known_measurement_types(make_file, filename, expected):
 
 def test_unknown_type_gets_underscored(make_file):
     f = make_file(filename="99 custom sweep.xlsx")
-    assert ext.extract(f).measurement_type == "custom_sweep" #extraction makes no difference since it wont be assigned to any of the values in type map
+    assert (
+        ext.extract(f).measurement_type == "custom_sweep"
+    )  # extraction makes no difference since it wont be assigned to any of the values in type map
 
 
 def test_bad_filename_gives_no_type(make_file):
@@ -55,7 +61,7 @@ def test_stack_and_device_ids(make_file):
 
 def test_case_insensitive_extension(make_file):
     f = make_file(filename="02 Reset.XLSX")
-    assert ext.extract(f).measurement_type == "reset" #map to one of type map values!
+    assert ext.extract(f).measurement_type == "reset"  # map to one of type map values!
 
 
 def test_filename_pattern_rejects_edge_cases():
