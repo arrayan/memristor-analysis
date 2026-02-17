@@ -1,7 +1,7 @@
 from PySide6.QtCore import QObject, Signal, Slot
 
 # Replace 'plotting_module' with the actual filename/path of your plotting script
-from plotting.run import main as run_plotting_pipeline
+from ..plotting.run import main as run_plotting_pipeline
 
 
 class ImportWorker(QObject):
