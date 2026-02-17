@@ -115,7 +115,7 @@ class BatchConverter:
         # Combine cycles
         all_cycles = [r.cycles_df for r in results if r.cycles_df is not None]
         if all_cycles:
-            combined_cycles = pl.concat(all_cycles, how="diagonal")
+            combined_cycles = pl.concat(all_cycles, how="diagonal_relaxed")
             row_count = self.db_writer.write_cycles(combined_cycles)
             print(f"Created 'cycles' table with {row_count:,} rows")
 
@@ -128,7 +128,7 @@ class BatchConverter:
                 all_metadata[table_name].append(df)
 
         for table_name, dfs in all_metadata.items():
-            combined = pl.concat(dfs, how="diagonal")
+            combined = pl.concat(dfs, how="diagonal_relaxed")
             row_count = self.db_writer.write_metadata_table(table_name, combined)
             print(f"Created '{table_name}' table with {row_count:,} rows")
 
