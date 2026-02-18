@@ -1,6 +1,4 @@
-import pytest
 import PySide6.QtWidgets as qt
-from pathlib import Path
 from src.app.ui import NavigationBar
 
 def test_welcome_screen_empty_dir(qtbot, tmp_path):
