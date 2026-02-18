@@ -106,7 +106,7 @@ class MainWindow(qt.QMainWindow):
             callback(viewer)
 
     def cleanup_and_exit(self):
-        '''Deletes contents of src/app/temp/ and exits the application.'''
+        """Deletes contents of src/app/temp/ and exits the application."""
         temp_dir = Path(__file__).parent.parent / "temp"
         print(f"Cleaning up temporary files in {temp_dir}...")
         if temp_dir.exists() and temp_dir.is_dir():
