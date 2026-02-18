@@ -16,3 +16,4 @@ __pycache__/
 output/
 *.html
 testing_recources/
+output.duckdb
