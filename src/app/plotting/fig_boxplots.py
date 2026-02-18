@@ -101,6 +101,7 @@ def build_boxplots_fig(box_table: "pd.DataFrame", sets: list[str]) -> go.Figure:
         title=f"Boxplot – {param_map[first_param]['pretty']}",
         xaxis_title="Set / File",
         yaxis_title=param_map[first_param]["pretty"],
+        yaxis_type="log" if "R_LRS" in param_map else "linear",
         width=900,
         height=600,
         boxmode="group",
