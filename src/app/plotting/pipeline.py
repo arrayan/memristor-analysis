@@ -3,10 +3,10 @@ from __future__ import annotations
 from dataclasses import dataclass
 import pandas as pd
 
-from .config import Config
-from .db import DuckDBSession
-from .repository import MemristorRepository
-from .transforms import (
+from plotting.config import Config
+from plotting.db import DuckDBSession
+from plotting.repository import MemristorRepository
+from plotting.transforms import (
     build_cdf_table,
     build_box_table,
     build_endurance_table,

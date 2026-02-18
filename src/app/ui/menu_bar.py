@@ -1,6 +1,6 @@
 import PySide6.QtWidgets as qt
 from PySide6.QtGui import QAction, QActionGroup
-from ..core import MenuAction
+from core import MenuAction
 
 
 class MenuBar(qt.QMenuBar):
