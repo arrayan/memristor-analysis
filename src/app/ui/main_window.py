@@ -5,6 +5,8 @@ from .navigation_bar import NavigationBar
 from core import MenuAction, Mode
 from converter import BatchConverter, path_to_glob
 from .import_worker import ImportWorker
+import shutil
+from pathlib import Path
 
 
 class MainWindow(qt.QMainWindow):
@@ -26,6 +28,8 @@ class MainWindow(qt.QMainWindow):
 
     def setup_connections(self):
         menu_actions = self.menu_bar.menu_actions
+
+        menu_actions[MenuAction.EXIT].triggered.connect(self.cleanup_and_exit)
 
         # Connect Imports (Shortcuts and Menu)
         menu_actions[MenuAction.IMPORT_DEVICE].triggered.connect(
@@ -100,3 +104,11 @@ class MainWindow(qt.QMainWindow):
         viewer = self.nav_bar.get_current_viewer()
         if viewer:
             callback(viewer)
+
+    def cleanup_and_exit(self):
+        '''Deletes contents of src/app/temp/ and exits the application.'''
+        temp_dir = Path(__file__).parent.parent / "temp"
+        print(f"Cleaning up temporary files in {temp_dir}...")
+        if temp_dir.exists() and temp_dir.is_dir():
+            shutil.rmtree(temp_dir)
+        self.close()
