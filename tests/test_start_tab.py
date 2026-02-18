@@ -1,6 +1,7 @@
 import PySide6.QtWidgets as qt
 from src.app.ui import NavigationBar
 
+
 def test_welcome_screen_empty_dir(qtbot, tmp_path):
     """Verify the start screen shows instructions when no data is found."""
     # Create a dummy temp dir that is empty
@@ -15,7 +16,7 @@ def test_welcome_screen_empty_dir(qtbot, tmp_path):
     # Check that the 'Start' tab is created
     assert widget.count() == 1
     assert widget.tabText(0) == "Start"
-    
+
     # Check if the instruction label exists
     # (Finding by text is a great way to verify UI state)
     label = widget.findChild(qt.QLabel)
