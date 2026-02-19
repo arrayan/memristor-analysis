@@ -8,6 +8,7 @@ from .sheets import SheetProcessor
 from .file_processor import ExcelFileProcessor
 from .writer import DuckDBWriter
 from .batch import BatchConverter
+from .convert_path_to_glob import path_to_glob
 
 
 """
@@ -88,4 +89,5 @@ __all__ = [
     "convert_single",
     "export_to_parquet",
     "query_db",
+    "path_to_glob",
 ]

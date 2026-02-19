@@ -1,5 +1,5 @@
 import pytest
-from converter.metadata import MetadataExtractor
+from src.app.converter.metadata import MetadataExtractor
 
 ext = MetadataExtractor()
 

@@ -1,0 +1,77 @@
+import PySide6.QtWidgets as qt
+from PySide6.QtGui import QAction, QActionGroup
+from core import MenuAction
+
+
+class MenuBar(qt.QMenuBar):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.menu_actions = {}
+        self.setup_ui()
+
+    def setup_ui(self):
+        # Create Actions from enum
+        for action in MenuAction:
+            menu_action = QAction(action.text, self)
+            if action.shortcut:
+                menu_action.setShortcut(action.shortcut)
+            if action.checkable:
+                menu_action.setCheckable(True)
+            # Store it so we can access it later
+            self.menu_actions[action] = menu_action
+
+        self.setup_file_menu()
+        self.setup_options_menu()
+        self.setup_help_menu()
+
+    def setup_file_menu(self):
+        self.file_menu = self.addMenu("File")
+
+        self.file_menu.addSection("Import")
+        self.file_menu.addAction(self.menu_actions[MenuAction.IMPORT_DEVICE])
+        self.file_menu.addAction(self.menu_actions[MenuAction.IMPORT_STACK])
+        self.file_menu.addSeparator()
+
+        self.file_menu.addSection("Export")
+        self.file_sub_menu_export_all = self.file_menu.addMenu("All To")
+        self.file_sub_menu_export_current = self.file_menu.addMenu("Current To")
+        self.file_sub_menu_export_all.addAction(
+            self.menu_actions[MenuAction.EXPORT_ALL_PNG]
+        )
+        self.file_sub_menu_export_all.addAction(
+            self.menu_actions[MenuAction.EXPORT_ALL_JPEG]
+        )
+        self.file_sub_menu_export_all.addAction(
+            self.menu_actions[MenuAction.EXPORT_ALL_APS]
+        )
+        self.file_sub_menu_export_current.addAction(
+            self.menu_actions[MenuAction.EXPORT_CURRENT_PNG]
+        )
+        self.file_sub_menu_export_current.addAction(
+            self.menu_actions[MenuAction.EXPORT_CURRENT_JPEG]
+        )
+        self.file_sub_menu_export_current.addAction(
+            self.menu_actions[MenuAction.EXPORT_CURRENT_APS]
+        )
+        self.file_menu.addAction(self.menu_actions[MenuAction.EXPORT_ALL])
+        self.file_menu.addAction(self.menu_actions[MenuAction.EXPORT_CURRENT])
+        self.file_menu.addSeparator()
+
+        self.file_menu.addAction(self.menu_actions[MenuAction.EXIT])
+
+    def setup_options_menu(self):
+        self.options_menu = self.addMenu("Options")
+        scale = QActionGroup(self)
+        scale.setExclusive(True)
+        scale_lin = self.menu_actions[MenuAction.SCALE_LINEAR]
+        scale_log = self.menu_actions[MenuAction.SCALE_LOG]
+        scale.addAction(scale_lin)
+        scale_lin.setChecked(True)
+        scale.addAction(scale_log)
+
+        self.options_menu.addSection("Scale")
+        self.options_menu.addActions([scale_lin, scale_log])
+
+    def setup_help_menu(self):
+        self.help_menu = self.addMenu("Help")
+        self.help_menu.addAction(self.menu_actions[MenuAction.VIEW_HELP])
