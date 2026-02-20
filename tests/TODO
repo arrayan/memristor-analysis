@@ -1,0 +1,3 @@
+TODO create test for cleanup of temp files
+TODO create test for creating and correctly saving html files in correct directory
+TODO create test for checking correct handling of glob and non-glob paths
