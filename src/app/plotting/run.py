@@ -3,11 +3,11 @@ from __future__ import annotations
 from .config import load_config
 from .pipeline import load_all
 
-from .fig_characteristic import build_characteristic_fig
-from .fig_cdf import build_cdf_fig
-from .fig_boxplots import build_boxplots_fig
-from .fig_endurance import build_endurance_fig
-from .fig_correlation import build_correlation_scatter_fig
+from .fig_characteristic import build_characteristic_figs
+from .fig_cdf import build_cdf_figs
+from .fig_boxplots import build_boxplots_figs
+from .fig_endurance import build_endurance_figs
+from .fig_correlation import build_correlation_scatter_figs
 
 
 def _write(fig, out_path) -> None:
