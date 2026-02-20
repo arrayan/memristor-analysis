@@ -19,7 +19,7 @@ def main() -> None:
     cfg = load_config()
     data = load_all(cfg)
 
-#  Characteristic
+    #  Characteristic
     def write_characteristic_figs():
         # Create the directory for characteristic plots
         char_dir = cfg.output_dir / "characteristic_plots"
@@ -33,8 +33,8 @@ def main() -> None:
             _write(fig, char_dir / f"{pid}.html")
 
     write_characteristic_figs()
-    
-#  CDF
+
+    #  CDF
     # Create the directory
     cdf_dir = cfg.output_dir / "cdfs"
     cdf_dir.mkdir(parents=True, exist_ok=True)
@@ -46,7 +46,7 @@ def main() -> None:
         # Using your existing _write function
         _write(fig, cdf_dir / f"{pid}.html")
 
-# Boxplots
+    # Boxplots
     # 1. Define and create the output directory
     boxplot_dir = cfg.output_dir / "boxplots"
     boxplot_dir.mkdir(parents=True, exist_ok=True)

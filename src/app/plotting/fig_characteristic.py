@@ -4,14 +4,15 @@ import pandas as pd
 import plotly.graph_objects as go
 import plotly.express as px
 
+
 def build_characteristic_figs(
     raw_by_set: dict[str, "pd.DataFrame"], sets: list[str]
 ) -> list[go.Figure]:
     """
-    Creates two figures: 
+    Creates two figures:
     1. AI (Current) vs AV - Log Scale
     2. NORM_COND (Conductance) vs AV - Linear Scale
-    
+
     All sets are displayed in the same plot, colored by file.
     """
     if not sets:
@@ -34,7 +35,7 @@ def build_characteristic_figs(
 
     for y_col, info in param_map.items():
         fig = go.Figure()
-        is_log = (info["scale"] == "log")
+        is_log = info["scale"] == "log"
         all_y_vals = []
 
         for s in sets:
@@ -44,7 +45,7 @@ def build_characteristic_figs(
 
             for idx, cyc in enumerate(cycles):
                 tiny = df[df["cycle_number"] == cyc]
-                
+
                 # Data cleaning
                 y_vals = pd.to_numeric(tiny[y_col], errors="coerce")
                 if is_log:
@@ -62,8 +63,8 @@ def build_characteristic_figs(
                         opacity=0.5,
                         name=s,
                         legendgroup=s,
-                        showlegend=(idx == 0), # Only show set name once in legend
-                        hovertemplate=f"Set: {s}<br>Cycle: {cyc}<br>V: %{{x}}V<br>Y: %{{y}}<extra></extra>"
+                        showlegend=(idx == 0),  # Only show set name once in legend
+                        hovertemplate=f"Set: {s}<br>Cycle: {cyc}<br>V: %{{x}}V<br>Y: %{{y}}<extra></extra>",
                     )
                 )
 
@@ -73,7 +74,7 @@ def build_characteristic_figs(
             autorange="reversed",
             gridcolor="#E5E5E5",
             zeroline=True,
-            zerolinecolor="gray"
+            zerolinecolor="gray",
         )
 
         # Y-Axis
@@ -86,7 +87,7 @@ def build_characteristic_figs(
                 exponentformat="power",
                 gridcolor="#E5E5E5",
                 minor=dict(showgrid=False),
-                title_text=f"|{info['pretty']}|"
+                title_text=f"|{info['pretty']}|",
             )
             # Ensure visible grid lines
             if all_y_vals:
@@ -98,11 +99,11 @@ def build_characteristic_figs(
         else:
             fig.update_yaxes(
                 type="linear",
-                title_text=info['pretty'],
+                title_text=info["pretty"],
                 gridcolor="#E5E5E5",
                 zeroline=True,
                 zerolinecolor="gray",
-                autorange=True
+                autorange=True,
             )
 
         fig.update_layout(
@@ -111,7 +112,7 @@ def build_characteristic_figs(
             height=700,
             template="plotly_white",
             legend=dict(groupclick="toggleitem", title="Files (Click to toggle)"),
-            meta={"param_id": y_col}
+            meta={"param_id": y_col},
         )
 
         figures.append(fig)

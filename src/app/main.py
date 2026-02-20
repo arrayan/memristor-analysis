@@ -9,6 +9,7 @@ if __package__ is None:
         0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     )
 
+
 def main():
     app = qt.QApplication(sys.argv)
     app.setStyle("Fusion")

@@ -108,30 +108,35 @@ class NavigationBar(qt.QTabWidget):
             # 2. Shared Labels for nested logic
             # (Note: Characteristic plots use different keys than Boxplots/CDFs)
             param_labels = {
-                "VSET": "V_set (V)", "V_reset": "V_reset (V)",
-                "R_LRS": "R_LRS (Ω)", "R_HRS": "R_HRS (Ω)",
-                "I_reset_max": "I_reset_max (A)", "V_forming": "V_forming (V)",
-            }
-            
-            char_labels = {
-                "AI": "Current (A)",
-                "NORM_COND": "Conductance (S)"
+                "VSET": "V_set (V)",
+                "V_reset": "V_reset (V)",
+                "R_LRS": "R_LRS (Ω)",
+                "R_HRS": "R_HRS (Ω)",
+                "I_reset_max": "I_reset_max (A)",
+                "V_forming": "V_forming (V)",
             }
 
+            char_labels = {"AI": "Current (A)", "NORM_COND": "Conductance (S)"}
+
             # 3. Endurance Boxplots (Nested)
-            self.addTab(self._create_nested_tab("boxplots", param_labels), "Endurance Boxplots")
+            self.addTab(
+                self._create_nested_tab("boxplots", param_labels), "Endurance Boxplots"
+            )
 
             # 4. Endurance CDF (Nested)
             self.addTab(self._create_nested_tab("cdfs", param_labels), "Endurance CDF")
-            
+
             # 5. Characteristic Plots (Nested) - NEW
-            self.addTab(self._create_nested_tab("characteristic_plots", char_labels), "Characteristic Plots")
+            self.addTab(
+                self._create_nested_tab("characteristic_plots", char_labels),
+                "Characteristic Plots",
+            )
 
     def _create_nested_tab(self, subfolder_name, labels_map):
         """Helper to create a QTabWidget from a subfolder of HTML files."""
         sub_tab_widget = qt.QTabWidget()
         folder_path = self.temp_device_dir / subfolder_name
-        
+
         found_any = False
         for param_id, label in labels_map.items():
             file_path = folder_path / f"{param_id}.html"
@@ -140,20 +145,22 @@ class NavigationBar(qt.QTabWidget):
                 viewer.load_html_file(str(file_path))
                 sub_tab_widget.addTab(viewer, label)
                 found_any = True
-        
+
         if not found_any:
             # Fallback if folder is empty or files missing
             viewer = PlotViewer()
-            viewer.browser.setHtml("<body style='background:#111; color:#555; display:flex; justify-content:center; align-items:center; height:100vh;'><div>No data available.</div></body>")
+            viewer.browser.setHtml(
+                "<body style='background:#111; color:#555; display:flex; justify-content:center; align-items:center; height:100vh;'><div>No data available.</div></body>"
+            )
             sub_tab_widget.addTab(viewer, "Empty")
-            
+
         return sub_tab_widget
 
     def _create_nested_tab(self, subfolder_name, labels_map):
         """Helper to create a QTabWidget from a subfolder of HTML files."""
         sub_tab_widget = qt.QTabWidget()
         folder_path = self.temp_device_dir / subfolder_name
-        
+
         found_any = False
         for param_id, label in labels_map.items():
             file_path = folder_path / f"{param_id}.html"
@@ -162,12 +169,14 @@ class NavigationBar(qt.QTabWidget):
                 viewer.load_html_file(str(file_path))
                 sub_tab_widget.addTab(viewer, label)
                 found_any = True
-        
+
         if not found_any:
             viewer = PlotViewer()
-            viewer.browser.setHtml("<body style='background:#111; color:#555;'><div>No data.</div></body>")
+            viewer.browser.setHtml(
+                "<body style='background:#111; color:#555;'><div>No data.</div></body>"
+            )
             sub_tab_widget.addTab(viewer, "Empty")
-            
+
         return sub_tab_widget
 
     def _set_missing_file_msg(self, viewer, filename):
