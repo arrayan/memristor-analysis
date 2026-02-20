@@ -93,44 +93,36 @@ class NavigationBar(qt.QTabWidget):
         self.clear()
 
         if level_text == "Device Level":
-            # 1. Standard Individual Tabs
-            standard_tabs = {
-                "Endurance Performance": "endurance_performance.html",
-                "Device Correlation": "device_correlation_scatter.html",
-            }
-            for label, filename in standard_tabs.items():
-                viewer = PlotViewer()
-                file_path = self.temp_device_dir / filename
-                if file_path.exists():
-                    viewer.load_html_file(str(file_path))
-                self.addTab(viewer, label)
+            # 1. Standard Tabs
+            viewer = PlotViewer()
+            if (self.temp_device_dir / "endurance_performance.html").exists():
+                viewer.load_html_file(str(self.temp_device_dir / "endurance_performance.html"))
+            self.addTab(viewer, "Endurance Performance")
 
-            # 2. Shared Labels for nested logic
-            # (Note: Characteristic plots use different keys than Boxplots/CDFs)
+            # 2. Parameter Definitions for Nested Tabs
             param_labels = {
-                "VSET": "V_set (V)",
-                "V_reset": "V_reset (V)",
-                "R_LRS": "R_LRS (Ω)",
-                "R_HRS": "R_HRS (Ω)",
-                "I_reset_max": "I_reset_max (A)",
-                "V_forming": "V_forming (V)",
+                "VSET": "V_set (V)", "V_reset": "V_reset (V)",
+                "R_LRS": "R_LRS (Ω)", "R_HRS": "R_HRS (Ω)",
+                "I_reset_max": "I_reset_max (A)", "V_forming": "V_forming (V)",
             }
-
+            
             char_labels = {"AI": "Current (A)", "NORM_COND": "Conductance (S)"}
 
-            # 3. Endurance Boxplots (Nested)
-            self.addTab(
-                self._create_nested_tab("boxplots", param_labels), "Endurance Boxplots"
-            )
+            # Map for Correlation Pairs
+            corr_labels = {
+                "V_set_vs_I_HRS": "Vset vs IHRS",
+                "V_set_vs_R_HRS": "Vset vs RHRS",
+                "V_reset_vs_I_LRS": "Vreset vs ILRS",
+                "V_reset_vs_R_LRS": "Vreset vs RLRS",
+                "V_reset_vs_I_reset_max": "Vreset vs Ireset",
+                "V_set_vs_V_reset": "Vset vs Vreset",
+            }
 
-            # 4. Endurance CDF (Nested)
+            # 3. Create All Nested Tab Groups
+            self.addTab(self._create_nested_tab("boxplots", param_labels), "Endurance Boxplots")
             self.addTab(self._create_nested_tab("cdfs", param_labels), "Endurance CDF")
-
-            # 5. Characteristic Plots (Nested) - NEW
-            self.addTab(
-                self._create_nested_tab("characteristic_plots", char_labels),
-                "Characteristic Plots",
-            )
+            self.addTab(self._create_nested_tab("characteristic_plots", char_labels), "Characteristic Plots")
+            self.addTab(self._create_nested_tab("correlation_plots", corr_labels), "Device Correlation")
 
     def _create_nested_tab(self, subfolder_name, labels_map):
         """Helper to create a QTabWidget from a subfolder of HTML files."""

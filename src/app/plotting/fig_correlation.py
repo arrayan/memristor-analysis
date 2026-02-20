@@ -1,133 +1,111 @@
 from __future__ import annotations
-
 import pandas as pd
+import numpy as np
 import plotly.graph_objects as go
 import plotly.express as px
 
-
-def build_correlation_scatter_fig(
+def build_correlation_scatter_figs(
     scatter_df: "pd.DataFrame", sets: list[str]
-) -> go.Figure:
+) -> list[go.Figure]:
     """
-    Device-level correlation scatter plots.
-    Two dropdowns: pair + set.
-
-    Expects scatter_df columns (from transforms.build_scatter_table):
-      source_file, cycle_number, V_set, V_reset, I_HRS, I_LRS, I_reset_max, R_HRS, R_LRS
+    Creates a list of correlation scatter plots (one per pair).
+    - All sets are displayed simultaneously.
+    - Automatic Log/Linear scaling based on parameter type.
+    - Major magnitudes only for log axes.
     """
-    fig = go.Figure()
-
     if scatter_df is None or scatter_df.empty or not sets:
-        fig.update_layout(title="Device correlation – no data")
-        return fig
+        return []
 
+    # 1. Define pairs and their scale types
     pairs = [
-        ("I_HRS", "V_set", "I_HRS (A) vs V_set (V)"),
-        ("R_HRS", "V_set", "R_HRS (Ω) vs V_set (V)"),
-        ("I_LRS", "V_reset", "I_LRS (A) vs V_reset (V)"),
-        ("R_LRS", "V_reset", "R_LRS (Ω) vs V_reset (V)"),
-        ("I_reset_max", "V_reset", "I_reset_max (A) vs V_reset (V)"),
+        ("V_set", "I_HRS", "V_set (V) vs I_HRS (A)"),
+        ("V_set", "R_HRS", "V_set (V) vs R_HRS (Ω)"),
+        ("V_reset", "I_LRS", "V_reset (V) vs I_LRS (A)"),
+        ("V_reset", "R_LRS", "V_reset (V) vs R_LRS (Ω)"),
+        ("V_reset", "I_reset_max", "V_reset (V) vs I_reset_max (A)"),
         ("V_set", "V_reset", "V_set (V) vs V_reset (V)"),
     ]
 
-    first_pair = pairs[0]
-    first_set = sets[0]
+    def get_scale(col_name):
+        return "log" if any(x in col_name for x in ["I_", "R_"]) else "linear"
 
-    cols = px.colors.sample_colorscale("Viridis", max(len(sets), 2))
-    color_map = {s: cols[i] for i, s in enumerate(sets)}
+    # 2. Setup Colors
+    base_cols = px.colors.qualitative.Plotly
+    set_color_map = {s: base_cols[i % len(base_cols)] for i, s in enumerate(sets)}
 
-    # One trace per (pair, set)
-    for x_col, y_col, title in pairs:
+    # 3. Log Ticks logic
+    tick_vals = [10.0**i for i in range(-15, 16)]
+    tick_text = [f"1e{i}" if i != 0 else "1" for i in range(-15, 16)]
+
+    figures = []
+
+    for x_col, y_col, title_text in pairs:
+        fig = go.Figure()
+        x_scale = get_scale(x_col)
+        y_scale = get_scale(y_col)
+        
+        all_x, all_y = [], []
+
         for s in sets:
-            df_s = scatter_df[scatter_df["source_file"] == s]
-            fig.add_trace(
-                go.Scatter(
-                    x=df_s[x_col] if (not df_s.empty and x_col in df_s.columns) else [],
-                    y=df_s[y_col] if (not df_s.empty and y_col in df_s.columns) else [],
-                    mode="markers",
-                    marker=dict(color=color_map.get(s, None), size=6),
-                    name=s,
-                    visible=False,
-                    meta={"x": x_col, "y": y_col, "set": s, "title": title},
-                    hovertemplate=f"{s}<br>{x_col}: %{{x}}<br>{y_col}: %{{y}}<extra></extra>",
-                )
+            df_s = scatter_df[scatter_df["source_file"] == s].copy()
+            if df_s.empty: continue
+
+            # Data Cleaning for Log/Linear
+            for col, scale in [(x_col, x_scale), (y_col, y_scale)]:
+                df_s[col] = pd.to_numeric(df_s[col], errors="coerce")
+                if scale == "log":
+                    df_s[col] = df_s[col].abs()
+                    df_s.loc[df_s[col] <= 0, col] = np.nan
+            
+            df_plot = df_s.dropna(subset=[x_col, y_col])
+            if df_plot.empty: continue
+
+            all_x.extend(df_plot[x_col].tolist())
+            all_y.extend(df_plot[y_col].tolist())
+
+            fig.add_trace(go.Scatter(
+                x=df_plot[x_col],
+                y=df_plot[y_col],
+                mode="markers",
+                marker=dict(color=set_color_map[s], size=7, opacity=0.7),
+                name=s,
+                legendgroup=s,
+                hovertemplate=f"File: {s}<br>{x_col}: %{{x}}<br>{y_col}: %{{y}}<extra></extra>"
+            ))
+
+        # --- Configure Axes ---
+        for axis_name, col, scale, all_vals in [("xaxis", x_col, x_scale, all_x), 
+                                                ("yaxis", y_col, y_scale, all_y)]:
+            axis_config = dict(
+                title_text=f"|{col}|" if scale == "log" else col,
+                gridcolor="#E5E5E5",
+                zeroline=(scale == "linear"),
+                zerolinecolor="gray"
             )
 
-    # default visibility
-    for tr in fig.data:
-        tr.visible = (
-            (tr.meta["x"] == first_pair[0])
-            and (tr.meta["y"] == first_pair[1])
-            and (tr.meta["set"] == first_set)
+            if scale == "log":
+                axis_config.update(dict(
+                    type="log", tickmode="array", tickvals=tick_vals, 
+                    ticktext=tick_text, exponentformat="power", minor=dict(showgrid=False)
+                ))
+                # Ensure at least one magnitude visible
+                if all_vals:
+                    lmin, lmax = np.log10(min(all_vals)), np.log10(max(all_vals))
+                    if (lmax - lmin) < 1.0:
+                        mid = (lmin + lmax) / 2
+                        axis_config["range"] = [mid - 0.55, mid + 0.55]
+            
+            fig.update_layout({axis_name: axis_config})
+
+        # --- Final Layout ---
+        param_id = f"{x_col}_vs_{y_col}"
+        fig.update_layout(
+            title=f"Correlation: {title_text}",
+            width=900, height=700,
+            template="plotly_white",
+            legend=dict(title="Files (Click to toggle)"),
+            meta={"param_id": param_id}
         )
+        figures.append(fig)
 
-    def vis_for(x_col: str, y_col: str, set_val: str) -> list[bool]:
-        return [
-            (tr.meta["x"] == x_col)
-            and (tr.meta["y"] == y_col)
-            and (tr.meta["set"] == set_val)
-            for tr in fig.data
-        ]
-
-    # Pair dropdown (keep current set)
-    pair_buttons = []
-    for x_col, y_col, title in pairs:
-        pair_buttons.append(
-            dict(
-                label=title,
-                method="update",
-                args=[
-                    {"visible": vis_for(x_col, y_col, first_set)},
-                    {
-                        "xaxis.title.text": x_col,
-                        "yaxis.title.text": y_col,
-                        "title": f"{title} – {first_set}",
-                    },
-                ],
-            )
-        )
-
-    # Set dropdown (keep current pair)
-    set_buttons = []
-    for s in sets:
-        x_col, y_col, title = first_pair
-        set_buttons.append(
-            dict(
-                label=s,
-                method="update",
-                args=[
-                    {"visible": vis_for(x_col, y_col, s)},
-                    {"title": f"{title} – {s}"},
-                ],
-            )
-        )
-
-    fig.update_layout(
-        updatemenus=[
-            dict(
-                buttons=pair_buttons,
-                direction="down",
-                showactive=True,
-                x=1.02,
-                y=1.15,
-                xanchor="left",
-                yanchor="top",
-            ),
-            dict(
-                buttons=set_buttons,
-                direction="down",
-                showactive=True,
-                x=1.02,
-                y=1.05,
-                xanchor="left",
-                yanchor="top",
-            ),
-        ],
-        title=f"{first_pair[2]} – {first_set}",
-        xaxis_title=first_pair[0],
-        yaxis_title=first_pair[1],
-        width=900,
-        height=600,
-    )
-
-    return fig
+    return figures

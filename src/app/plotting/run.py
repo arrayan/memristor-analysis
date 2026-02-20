@@ -7,7 +7,7 @@ from plotting.fig_characteristic import build_characteristic_figs
 from plotting.fig_cdf import build_cdf_figs
 from plotting.fig_boxplots import build_boxplots_figs
 from plotting.fig_endurance import build_endurance_fig
-from plotting.fig_correlation import build_correlation_scatter_fig
+from plotting.fig_correlation import build_correlation_scatter_figs
 
 
 def _write(fig, out_path) -> None:
@@ -70,8 +70,18 @@ def main() -> None:
     _write(fig, cfg.output_dir / cfg.endurance_html)
 
     #  Correlation scatter
-    fig = build_correlation_scatter_fig(data.scatter_df, data.sets)
-    _write(fig, cfg.output_dir / cfg.correlation_html)
+    def write_correlation_scatter_figs():
+            #  Correlation plots
+        char_dir = cfg.output_dir / "correlation_plots"
+        char_dir.mkdir(parents=True, exist_ok=True)
+
+        # Generate and Save
+        correlation_figs = build_correlation_scatter_figs(data.scatter_df, data.sets)
+        for fig in correlation_figs:
+            pid = fig.layout.meta.get("param_id")
+            _write(fig, char_dir / f"{pid}.html")
+    
+    write_correlation_scatter_figs()
 
 
 if __name__ == "__main__":
