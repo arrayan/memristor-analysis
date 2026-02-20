@@ -1,7 +1,7 @@
 import sys
 import os
 import PySide6.QtWidgets as qt
-from src.app.ui import MainWindow
+from ui import MainWindow
 
 
 if __package__ is None:
