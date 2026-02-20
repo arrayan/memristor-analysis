@@ -1,143 +1,127 @@
 from __future__ import annotations
-
 import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 import plotly.express as px
 
-
 def _cdf_xy(values: pd.Series) -> tuple[np.ndarray, np.ndarray]:
-    """Return sorted x and cumulative probability in percent."""
-    v = pd.to_numeric(values, errors="coerce").dropna().to_numpy()
+    """
+    Return sorted x and cumulative probability in percent.
+    Strictly filters for log-compatibility (absolute magnitude and > 0).
+    """
+    # 1. Convert to numeric and take absolute value
+    v = pd.to_numeric(values, errors="coerce").dropna().abs().to_numpy()
+    
+    # 2. Filter out zeros (log scale requirement)
+    v = v[v > 0]
+    
     if v.size == 0:
         return np.array([]), np.array([])
+        
     x = np.sort(v)
     y = (np.arange(1, x.size + 1) / x.size) * 100.0
     return x, y
 
-
-def build_cdf_fig(cdf_table: "pd.DataFrame", sets: list[str]) -> go.Figure:
+def build_cdf_figs(cdf_table: "pd.DataFrame", sets: list[str]) -> list[go.Figure]:
     """
-    CDF plots with two dropdowns: parameter + set.
-
-    Expects cdf_table columns (from transforms.build_cdf_table):
-      source_file, cycle_number, VSET, R_LRS, R_HRS, V_reset, I_reset_max, V_forming
+    Creates a list of CDF Figure objects, one for each parameter.
+    Every figure is strictly configured with a Log scale on the X-axis.
     """
-    fig = go.Figure()
-
     if cdf_table is None or cdf_table.empty or not sets:
-        fig.update_layout(title="CDF – no data")
-        return fig
+        return []
 
-    # Map of internal column -> display / axis scaling
+    # Map of internal column -> display names
+    # Note: We now treat all as 'log' to match your boxplot requirements
     param_map = {
-        "VSET": {"pretty": "V_set (V)", "scale": "linear"},
-        "V_reset": {"pretty": "V_reset (V)", "scale": "linear"},
-        "R_LRS": {"pretty": "R_LRS (Ω)", "scale": "log"},
-        "R_HRS": {"pretty": "R_HRS (Ω)", "scale": "log"},
-        "I_reset_max": {"pretty": "I_reset_max (A)", "scale": "log"},
-        "V_forming": {"pretty": "V_forming (V)", "scale": "linear"},
+        "VSET": {"pretty": "V_set (V)"},
+        "V_reset": {"pretty": "V_reset (V)"},
+        "R_LRS": {"pretty": "R_LRS (Ω)"},
+        "R_HRS": {"pretty": "R_HRS (Ω)"},
+        "I_reset_max": {"pretty": "I_reset_max (A)"},
+        "V_forming": {"pretty": "V_forming (V)"},
     }
 
-    # colors: one color per set (CDF is one line per set)
     cols = px.colors.sample_colorscale("Viridis", max(len(sets), 2))
     color_map = {s: cols[i] for i, s in enumerate(sets)}
 
-    # Add traces for every (param, set)
-    for param in param_map.keys():
+    # Generate custom log ticks (Visual Midpoint logic)
+    tick_vals = []
+    tick_text = []
+    for i in range(-15, 16):
+        major_val = 10.0**i
+        tick_vals.append(major_val)
+        tick_text.append(f"1e{i}" if i != 0 else "1")
+
+        mid_pos = 10.0**(i + 0.5) # The mathematical visual center
+        tick_vals.append(mid_pos)
+        tick_text.append(f"5e{i}" if i != 0 else "0.5")
+
+    figures = []
+
+    for param, info in param_map.items():
+        if param not in cdf_table.columns:
+            continue
+
+        fig = go.Figure()
+        has_any_data = False
+
         for s in sets:
             df_s = cdf_table[cdf_table["source_file"] == s]
-            x, y = _cdf_xy(
-                df_s[param] if param in df_s.columns else pd.Series(dtype=float)
-            )
-            fig.add_trace(
-                go.Scatter(
-                    x=x,
+            x, y = _cdf_xy(df_s[param])
+            
+            if x.size > 0:
+                has_any_data = True
+                fig.add_trace(go.Scatter(
+                    x=x, 
                     y=y,
-                    mode="lines",
-                    line=dict(color=color_map.get(s, None), width=2),
+                    mode="lines+markers", # Added markers to see data points better
                     name=s,
-                    visible=False,
-                    meta={"param": param, "set": s},
-                    hovertemplate="%{x}<br>%{y:.1f}%<extra></extra>",
-                )
-            )
+                    marker=dict(size=4),
+                    line=dict(color=color_map.get(s), width=2),
+                    hovertemplate="%{x}<br>%{y:.1f}%<extra></extra>"
+                ))
 
-    first_param = "VSET" if "VSET" in param_map else next(iter(param_map))
-    first_set = sets[0]
-
-    # default visibility: first_param + first_set
-    for tr in fig.data:
-        tr.visible = (tr.meta["param"] == first_param) and (tr.meta["set"] == first_set)
-
-    def vis_for(param_val: str, set_val: str) -> list[bool]:
-        return [
-            (tr.meta["param"] == param_val) and (tr.meta["set"] == set_val)
-            for tr in fig.data
-        ]
-
-    # parameter dropdown (preserve currently selected set)
-    param_buttons = []
-    for param, info in param_map.items():
-        visible = vis_for(param, first_set)
-        param_buttons.append(
-            dict(
-                label=info["pretty"],
-                method="update",
-                args=[
-                    {"visible": visible},
-                    {
-                        "xaxis.title.text": info["pretty"],
-                        "yaxis": dict(type="linear", title="Probability (%)"),
-                        "title": f"CDF – {info['pretty']} ({first_set})",
-                    },
-                ],
-            )
+        # X-Axis Configuration (The Log Scale)
+        fig.update_xaxes(
+            type="log",
+            tickmode="array",
+            tickvals=tick_vals,
+            ticktext=tick_text,
+            title_text=f"|{info['pretty']}|",
+            exponentformat="power",
+            showgrid=True,
+            gridcolor="#E5E5E5",
+            zeroline=False,
+            # Ensure the range actually contains the data
+            autorange=True 
         )
 
-    # set dropdown (preserve currently selected param)
-    set_buttons = []
-    for s in sets:
-        visible = vis_for(first_param, s)
-        info = param_map[first_param]
-        set_buttons.append(
-            dict(
-                label=s,
-                method="update",
-                args=[
-                    {"visible": visible},
-                    {"title": f"CDF – {info['pretty']} ({s})"},
-                ],
-            )
+        # Y-Axis (Probability)
+        fig.update_yaxes(
+            title_text="Probability (%)",
+            range=[-2, 102], # Slight padding to see 0 and 100 clearly
+            showgrid=True,
+            gridcolor="#E5E5E5"
         )
 
-    fig.update_layout(
-        updatemenus=[
-            dict(
-                buttons=param_buttons,
-                direction="down",
-                showactive=True,
-                x=1.02,
-                xanchor="left",
-                y=1.15,
-                yanchor="top",
-            ),
-            dict(
-                buttons=set_buttons,
-                direction="down",
-                showactive=True,
-                x=1.02,
-                xanchor="left",
-                y=1.05,
-                yanchor="top",
-            ),
-        ],
-        title=f"CDF – {param_map[first_param]['pretty']} ({first_set})",
-        xaxis_title=param_map[first_param]["pretty"],
-        yaxis_title="Probability (%)",
-        width=900,
-        height=600,
-        hovermode="x unified",
-    )
+        fig.update_layout(
+            title=f"CDF – {info['pretty']} (Log Scale)",
+            width=900,
+            height=600,
+            template="plotly_white",
+            showlegend=True,
+            # This meta tag is used by your NavigationBar to name the tab
+            meta={"param_id": param}
+        )
 
-    return fig
+        if not has_any_data:
+            fig.add_annotation(
+                text="No valid positive data found for log scale",
+                xref="paper", yref="paper",
+                x=0.5, y=0.5, showarrow=False,
+                font=dict(color="red", size=14)
+            )
+
+        figures.append(fig)
+
+    return figures

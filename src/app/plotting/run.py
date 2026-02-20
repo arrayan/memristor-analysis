@@ -4,8 +4,8 @@ from plotting.config import load_config
 from plotting.pipeline import load_all
 
 from plotting.fig_characteristic import build_characteristic_fig
-from plotting.fig_cdf import build_cdf_fig
-from plotting.fig_boxplots import build_boxplots_fig
+from plotting.fig_cdf import build_cdf_figs
+from plotting.fig_boxplots import build_boxplots_figs
 from plotting.fig_endurance import build_endurance_fig
 from plotting.fig_correlation import build_correlation_scatter_fig
 
@@ -23,26 +23,34 @@ def main() -> None:
     fig = build_characteristic_fig(data.raw_characteristic, data.sets)
     _write(fig, cfg.output_dir / cfg.characteristic_html)
 
-    #  CDF
-    fig = build_cdf_fig(data.cdf_table, data.sets)
-    _write(fig, cfg.output_dir / cfg.cdf_html)
+#  CDF
+    # Create the directory
+    cdf_dir = cfg.output_dir / "cdfs"
+    cdf_dir.mkdir(parents=True, exist_ok=True)
 
-    
+    # Generate and Save
+    cdf_figs = build_cdf_figs(data.cdf_table, data.sets)
+    for fig in cdf_figs:
+        pid = fig.layout.meta.get("param_id")
+        # Using your existing _write function
+        _write(fig, cdf_dir / f"{pid}.html")
+
+# Boxplots
     # 1. Define and create the output directory
     boxplot_dir = cfg.output_dir / "boxplots"
     boxplot_dir.mkdir(parents=True, exist_ok=True)
 
     # 2. Generate the figures
-    figs = build_boxplots_fig(data.box_table, data.sets)
+    figs = build_boxplots_figs(data.box_table, data.sets)
 
     # 3. Save each figure to its own file in the new directory
     for fig in figs:
         # Extract the parameter name we stored in meta (e.g., "VSET", "R_LRS")
         param_id = fig.layout.meta.get("param_id", "plot")
-        
+
         # Define the final path: cfg.output_dir / boxplots / VSET.html
         target_path = boxplot_dir / f"{param_id}.html"
-        
+
         # Write the file
         _write(fig, target_path)
 

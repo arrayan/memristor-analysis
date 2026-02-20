@@ -93,28 +93,20 @@ class NavigationBar(qt.QTabWidget):
         self.clear()
 
         if level_text == "Device Level":
-            # 1. Standard single-plot tabs
+            # 1. Individual Tabs
             standard_tabs = {
                 "Endurance Performance": "endurance_performance.html",
-                "Endurance CDF": "endurance_cdf.html",
                 "Characteristic Plots": "characteristic_plots.html",
                 "Device Correlation": "device_correlation_scatter.html",
             }
-
             for label, filename in standard_tabs.items():
                 viewer = PlotViewer()
                 file_path = self.temp_device_dir / filename
                 if file_path.exists():
                     viewer.load_html_file(str(file_path))
-                else:
-                    self._set_missing_file_msg(viewer, filename)
                 self.addTab(viewer, label)
 
-            # 2. Nested Boxplot Tab Group
-            boxplot_subfolder = self.temp_device_dir / "boxplots"
-            boxplot_tab_group = qt.QTabWidget()
-            
-            # Map the filename to a pretty label for the sub-tabs
+            # 2. Parameters for Nested Logic
             param_labels = {
                 "VSET": "V_set (V)",
                 "V_reset": "V_reset (V)",
@@ -124,26 +116,32 @@ class NavigationBar(qt.QTabWidget):
                 "V_forming": "V_forming (V)",
             }
 
-            found_boxplots = False
-            for param_id, label in param_labels.items():
-                file_path = boxplot_subfolder / f"{param_id}.html"
-                if file_path.exists():
-                    sub_viewer = PlotViewer()
-                    sub_viewer.load_html_file(str(file_path))
-                    boxplot_tab_group.addTab(sub_viewer, label)
-                    found_boxplots = True
+            # 3. Create Nested Boxplots
+            self.addTab(self._create_nested_tab("boxplots", param_labels), "Endurance Boxplots")
 
-            if found_boxplots:
-                self.addTab(boxplot_tab_group, "Endurance Boxplots")
-            else:
-                # Fallback if the folder or files don't exist
-                err_viewer = PlotViewer()
-                self._set_missing_file_msg(err_viewer, "boxplots/*")
-                self.addTab(err_viewer, "Endurance Boxplots")
+            # 4. Create Nested CDFs
+            self.addTab(self._create_nested_tab("cdfs", param_labels), "Endurance CDF")
 
-        elif level_text == "Stack Level":
-            # ... (Stack level code remains the same)
-            pass
+    def _create_nested_tab(self, subfolder_name, labels_map):
+        """Helper to create a QTabWidget from a subfolder of HTML files."""
+        sub_tab_widget = qt.QTabWidget()
+        folder_path = self.temp_device_dir / subfolder_name
+        
+        found_any = False
+        for param_id, label in labels_map.items():
+            file_path = folder_path / f"{param_id}.html"
+            if file_path.exists():
+                viewer = PlotViewer()
+                viewer.load_html_file(str(file_path))
+                sub_tab_widget.addTab(viewer, label)
+                found_any = True
+        
+        if not found_any:
+            viewer = PlotViewer()
+            viewer.browser.setHtml("<body style='background:#111; color:#555;'><div>No data.</div></body>")
+            sub_tab_widget.addTab(viewer, "Empty")
+            
+        return sub_tab_widget
 
     def _set_missing_file_msg(self, viewer, filename):
         """Helper to set error message in browser."""
@@ -155,15 +153,15 @@ class NavigationBar(qt.QTabWidget):
 
     def get_current_viewer(self) -> PlotViewer:
         widget = self.currentWidget()
-        
+
         # If it's a direct PlotViewer (e.g., Endurance Performance)
         if isinstance(widget, PlotViewer):
             return widget
-        
+
         # If it's the nested TabWidget (Boxplots)
         if isinstance(widget, qt.QTabWidget):
             sub_widget = widget.currentWidget()
             if isinstance(sub_widget, PlotViewer):
                 return sub_widget
-                
+
         return None

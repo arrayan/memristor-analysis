@@ -3,10 +3,11 @@ import pandas as pd
 import plotly.graph_objects as go
 import plotly.express as px
 
-def build_boxplots_fig(box_table: "pd.DataFrame", sets: list[str]) -> list[go.Figure]:
+
+def build_boxplots_figs(box_table: "pd.DataFrame", sets: list[str]) -> list[go.Figure]:
     """
     Creates a list of plotly Figure objects, one for each parameter.
-    
+
     Features:
     - All axes are Log Scale.
     - Data is converted to absolute magnitude (handles negative I_reset/V_reset).
@@ -42,7 +43,7 @@ def build_boxplots_fig(box_table: "pd.DataFrame", sets: list[str]) -> list[go.Fi
 
         # Visual Midpoint
         # 10^(i + 0.5) is mathematically the center point between 10^i and 10^(i+1)
-        mid_pos = 10.0**(i + 0.5)
+        mid_pos = 10.0 ** (i + 0.5)
         tick_vals.append(mid_pos)
         tick_text.append(f"5e{i}" if i != 0 else "0.5")
 
@@ -57,28 +58,30 @@ def build_boxplots_fig(box_table: "pd.DataFrame", sets: list[str]) -> list[go.Fi
 
         for s in sets:
             df_s = box_table[box_table["source_file"] == s]
-            
+
             # Data Cleaning
             vals = pd.to_numeric(df_s[param], errors="coerce").dropna()
-            
+
             # 1. Take Absolute Magnitude (Mandatory for Log scale of negative currents/voltages)
             vals = vals.abs()
-            
+
             # 2. Filter out Zeros (Log is undefined at 0)
             vals = vals[vals > 0]
 
             if not vals.empty:
                 has_any_data = True
-            
-            fig.add_trace(go.Box(
-                y=vals,
-                name=s,
-                marker_color=color_map.get(s),
-                boxmean=False,
-                line=dict(width=2),
-                fillcolor=color_map.get(s),
-                opacity=0.7
-            ))
+
+            fig.add_trace(
+                go.Box(
+                    y=vals,
+                    name=s,
+                    marker_color=color_map.get(s),
+                    boxmean=False,
+                    line=dict(width=2),
+                    fillcolor=color_map.get(s),
+                    opacity=0.7,
+                )
+            )
 
         # Apply the specialized Log Axis configuration
         fig.update_yaxes(
@@ -90,15 +93,11 @@ def build_boxplots_fig(box_table: "pd.DataFrame", sets: list[str]) -> list[go.Fi
             autorange=True,
             showgrid=True,
             gridcolor="#E5E5E5",
-            minor_ticks="", # Hide the auto-generated small ticks
+            minor_ticks="",  # Hide the auto-generated small ticks
             zeroline=False,
         )
 
-        fig.update_xaxes(
-            title_text="Set / File",
-            showgrid=True,
-            gridcolor="#E5E5E5"
-        )
+        fig.update_xaxes(title_text="Set / File", showgrid=True, gridcolor="#E5E5E5")
 
         fig.update_layout(
             title=f"Boxplot – {info['pretty']} (Log Magnitude)",
@@ -108,16 +107,19 @@ def build_boxplots_fig(box_table: "pd.DataFrame", sets: list[str]) -> list[go.Fi
             showlegend=True,
             boxmode="group",
             # Meta tag used by the PySide6 UI to identify the plot
-            meta={"param_id": param}
+            meta={"param_id": param},
         )
 
         # Placeholder if no valid data found
         if not has_any_data:
             fig.add_annotation(
                 text="No valid positive data found for log scale",
-                xref="paper", yref="paper",
-                x=0.5, y=0.5, showarrow=False,
-                font=dict(color="red", size=14)
+                xref="paper",
+                yref="paper",
+                x=0.5,
+                y=0.5,
+                showarrow=False,
+                font=dict(color="red", size=14),
             )
 
         figures.append(fig)
