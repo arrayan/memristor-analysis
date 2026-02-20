@@ -1,5 +1,5 @@
 from pathlib import Path
-from core import Mode
+from ..core import Mode
 
 
 def path_to_glob(path: Path | str, mode: Mode) -> str:
