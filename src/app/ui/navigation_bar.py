@@ -93,36 +93,48 @@ class NavigationBar(qt.QTabWidget):
         self.clear()
 
         if level_text == "Device Level":
-            # 1. Standard Individual Tabs (Remaining ones)
-            standard_tabs = {
-                "Device Correlation": "device_correlation_scatter.html", # Or move to nested if preferred
-            }
-            # Note: Since we nested almost everything, you might only have 1 or 2 left here.
-
-            # 2. Define Parameter Labels for Nested Groups
+            # Define Parameter Labels for Nested Groups
             param_labels = {
-                "V_set": "V_set (V)", "V_reset": "V_reset (V)",
-                "R_LRS": "R_LRS (Ω)", "R_HRS": "R_HRS (Ω)",
-                "I_LRS": "I_LRS (A)", "I_HRS": "I_HRS (A)",
-                "I_reset_max": "I_reset_max (A)", "Memory_window": "Window (Ω)",
-                "VSET": "V_set (V)", "V_reset": "V_reset (V)", # Variants for Boxplots/CDFs
-                "V_forming": "V_forming (V)",
+                "V_set": "V Set",
+                "V_reset": "V Reset",
+                "R_LRS": "R LRS",
+                "R_HRS": "R HRS",
+                "I_LRS": "I LRS",
+                "I_HRS": "I HRS",
+                "I_reset_max": "I Reset Max",
+                "Memory_window": "Memory Window",
+                "VSET": "V Set",  # "V_reset": "V Reset",
+                "V_forming": "V Forming",
             }
-            
+
             char_labels = {"AI": "Current (A)", "NORM_COND": "Conductance (S)"}
-            
+
             corr_labels = {
-                "V_set_vs_I_HRS": "Vset vs IHRS", "V_set_vs_R_HRS": "Vset vs RHRS",
-                "V_reset_vs_I_LRS": "Vreset vs ILRS", "V_reset_vs_R_LRS": "Vreset vs RLRS",
-                "V_reset_vs_I_reset_max": "Vreset vs Ireset", "V_set_vs_V_reset": "Vset vs Vreset"
+                "V_set_vs_I_HRS": "Vset vs IHRS",
+                "V_set_vs_R_HRS": "Vset vs RHRS",
+                "V_reset_vs_I_LRS": "Vreset vs ILRS",
+                "V_reset_vs_R_LRS": "Vreset vs RLRS",
+                "V_reset_vs_I_reset_max": "Vreset vs Ireset",
+                "V_set_vs_V_reset": "Vset vs Vreset",
             }
 
             # 3. Create All Nested Tab Groups
-            self.addTab(self._create_nested_tab("endurance_performance", param_labels), "Endurance Performance")
-            self.addTab(self._create_nested_tab("boxplots", param_labels), "Endurance Boxplots")
+            self.addTab(
+                self._create_nested_tab("endurance_performance", param_labels),
+                "Endurance Performance",
+            )
+            self.addTab(
+                self._create_nested_tab("boxplots", param_labels), "Endurance Boxplots"
+            )
             self.addTab(self._create_nested_tab("cdfs", param_labels), "Endurance CDF")
-            self.addTab(self._create_nested_tab("characteristic_plots", char_labels), "Characteristic Plots")
-            self.addTab(self._create_nested_tab("correlation_plots", corr_labels), "Device Correlation")
+            self.addTab(
+                self._create_nested_tab("characteristic_plots", char_labels),
+                "Characteristic Plots",
+            )
+            self.addTab(
+                self._create_nested_tab("correlation_plots", corr_labels),
+                "Device Correlation",
+            )
 
     def _create_nested_tab(self, subfolder_name, labels_map):
         """Helper to create a QTabWidget from a subfolder of HTML files."""

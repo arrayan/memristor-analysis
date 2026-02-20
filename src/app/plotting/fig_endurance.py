@@ -4,6 +4,7 @@ import pandas as pd
 import plotly.graph_objects as go
 import plotly.express as px
 
+
 def build_endurance_figs(end_df: "pd.DataFrame", sets: list[str]) -> list[go.Figure]:
     """
     Creates a list of Endurance Figures (one per parameter).
@@ -15,13 +16,13 @@ def build_endurance_figs(end_df: "pd.DataFrame", sets: list[str]) -> list[go.Fig
         return []
 
     param_map = {
-        "V_set":         {"pretty": "V_set (V)",          "scale": "linear"},
-        "V_reset":       {"pretty": "V_reset (V)",        "scale": "linear"},
-        "I_LRS":         {"pretty": "I_LRS (A)",          "scale": "log"},
-        "I_HRS":         {"pretty": "I_HRS (A)",          "scale": "log"},
-        "R_LRS":         {"pretty": "R_LRS (Ω)",          "scale": "log"},
-        "R_HRS":         {"pretty": "R_HRS (Ω)",          "scale": "log"},
-        "I_reset_max":   {"pretty": "I_reset_max (A)",    "scale": "log"},
+        "V_set": {"pretty": "V_set (V)", "scale": "linear"},
+        "V_reset": {"pretty": "V_reset (V)", "scale": "linear"},
+        "I_LRS": {"pretty": "I_LRS (A)", "scale": "log"},
+        "I_HRS": {"pretty": "I_HRS (A)", "scale": "log"},
+        "R_LRS": {"pretty": "R_LRS (Ω)", "scale": "log"},
+        "R_HRS": {"pretty": "R_HRS (Ω)", "scale": "log"},
+        "I_reset_max": {"pretty": "I_reset_max (A)", "scale": "log"},
         "Memory_window": {"pretty": "Memory Window (Ω)", "scale": "log"},
     }
 
@@ -39,13 +40,14 @@ def build_endurance_figs(end_df: "pd.DataFrame", sets: list[str]) -> list[go.Fig
             continue
 
         fig = go.Figure()
-        is_log = (info["scale"] == "log")
+        is_log = info["scale"] == "log"
         has_any_data = False
         all_y_vals = []
 
         for s in sets:
             df_s = end_df[end_df["source_file"] == s].copy()
-            if df_s.empty: continue
+            if df_s.empty:
+                continue
 
             # Prepare data
             x = df_s["cycle_number"]
@@ -60,15 +62,17 @@ def build_endurance_figs(end_df: "pd.DataFrame", sets: list[str]) -> list[go.Fig
 
             if not x.empty:
                 has_any_data = True
-                fig.add_trace(go.Scatter(
-                    x=x,
-                    y=y,
-                    mode="lines+markers",
-                    name=s,
-                    line=dict(color=color_map.get(s), width=2),
-                    marker=dict(size=5),
-                    hovertemplate=f"File: {s}<br>Cycle: %{{x}}<br>{info['pretty']}: %{{y}}<extra></extra>"
-                ))
+                fig.add_trace(
+                    go.Scatter(
+                        x=x,
+                        y=y,
+                        mode="lines+markers",
+                        name=s,
+                        line=dict(color=color_map.get(s), width=2),
+                        marker=dict(size=5),
+                        hovertemplate=f"File: {s}<br>Cycle: %{{x}}<br>{info['pretty']}: %{{y}}<extra></extra>",
+                    )
+                )
 
         # --- Axis Configuration ---
         if is_log:
@@ -81,7 +85,7 @@ def build_endurance_figs(end_df: "pd.DataFrame", sets: list[str]) -> list[go.Fig
                 title_text=f"|{info['pretty']}|",
                 gridcolor="#E5E5E5",
                 minor=dict(showgrid=False),
-                zeroline=False
+                zeroline=False,
             )
             # Force range logic: ensure at least one decade is visible
             if all_y_vals:
@@ -93,11 +97,11 @@ def build_endurance_figs(end_df: "pd.DataFrame", sets: list[str]) -> list[go.Fig
         else:
             fig.update_yaxes(
                 type="linear",
-                title_text=info['pretty'],
+                title_text=info["pretty"],
                 gridcolor="#E5E5E5",
                 zeroline=True,
                 zerolinecolor="gray",
-                autorange=True
+                autorange=True,
             )
 
         fig.update_xaxes(title_text="Cycle Number", gridcolor="#E5E5E5")
@@ -109,11 +113,18 @@ def build_endurance_figs(end_df: "pd.DataFrame", sets: list[str]) -> list[go.Fig
             height=600,
             template="plotly_white",
             showlegend=True,
-            meta={"param_id": param}
+            meta={"param_id": param},
         )
 
         if not has_any_data:
-            fig.add_annotation(text="No data", xref="paper", yref="paper", x=0.5, y=0.5, showarrow=False)
+            fig.add_annotation(
+                text="No data",
+                xref="paper",
+                yref="paper",
+                x=0.5,
+                y=0.5,
+                showarrow=False,
+            )
 
         figures.append(fig)
 

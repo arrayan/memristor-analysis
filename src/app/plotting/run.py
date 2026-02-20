@@ -51,7 +51,7 @@ def main() -> None:
 
     # Boxplots
     def write_boxplot_figs():
-        # Create the directory  
+        # Create the directory
         boxplot_dir = cfg.output_dir / "boxplots"
         boxplot_dir.mkdir(parents=True, exist_ok=True)
 
@@ -74,12 +74,12 @@ def main() -> None:
         for fig in end_figs:
             pid = fig.layout.meta.get("param_id")
             _write(fig, end_dir / f"{pid}.html")
-    
+
     write_endurance_figs()
 
     #  Correlation scatter
     def write_correlation_scatter_figs():
-            #  Correlation plots
+        #  Correlation plots
         char_dir = cfg.output_dir / "correlation_plots"
         char_dir.mkdir(parents=True, exist_ok=True)
 
@@ -88,7 +88,7 @@ def main() -> None:
         for fig in correlation_figs:
             pid = fig.layout.meta.get("param_id")
             _write(fig, char_dir / f"{pid}.html")
-    
+
     write_correlation_scatter_figs()
 
 
