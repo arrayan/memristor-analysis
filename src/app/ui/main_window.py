@@ -2,8 +2,8 @@ import PySide6.QtWidgets as qt
 from PySide6.QtCore import QThread, Qt
 from .menu_bar import MenuBar
 from .navigation_bar import NavigationBar
-from core import MenuAction, Mode
-from converter import BatchConverter, path_to_glob
+from ..core import MenuAction, Mode
+from ..converter import BatchConverter, path_to_glob
 from .import_worker import ImportWorker
 import shutil
 from pathlib import Path
