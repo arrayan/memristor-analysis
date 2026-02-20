@@ -4,30 +4,39 @@ import pandas as pd
 import plotly.graph_objects as go
 import plotly.express as px
 
-def build_characteristic_fig(
+def build_characteristic_figs(
     raw_by_set: dict[str, "pd.DataFrame"], sets: list[str]
-) -> go.Figure:
+) -> list[go.Figure]:
     """
-    Displays AI and NORM_COND vs AV. 
-    All sets are displayed simultaneously in the same plot.
-    Dropdown allows switching between AI (Log) and NORM_COND (Linear).
+    Creates two figures: 
+    1. AI (Current) vs AV - Log Scale
+    2. NORM_COND (Conductance) vs AV - Linear Scale
+    
+    All sets are displayed in the same plot, colored by file.
     """
     if not sets:
-        return go.Figure()
+        return []
 
-    fig = go.Figure()
+    param_map = {
+        "AI": {"pretty": "Current (A)", "scale": "log"},
+        "NORM_COND": {"pretty": "Conductance (S)", "scale": "linear"},
+    }
 
-    # 1. Setup Colors: Unique color per set
-    # Cycles within a set will share the same color to prevent a "rainbow mess"
+    # Unique color per set (file)
     base_cols = px.colors.qualitative.Plotly
     set_color_map = {s: base_cols[i % len(base_cols)] for i, s in enumerate(sets)}
 
-    y_label_map = {"AI": "Current |AI| (A)", "NORM_COND": "Conductance NORM_COND (S)"}
+    # Log ticks for AI
+    tick_vals = [10.0**i for i in range(-15, 1)]
+    tick_text = [f"1e{i}" if i != 0 else "1" for i in range(-15, 1)]
 
-    # 2. Add Traces
-    for y_col in ["AI", "NORM_COND"]:
-        is_log = (y_col == "AI")
-        
+    figures = []
+
+    for y_col, info in param_map.items():
+        fig = go.Figure()
+        is_log = (info["scale"] == "log")
+        all_y_vals = []
+
         for s in sets:
             df = raw_by_set[s]
             cycles = df["cycle_number"].unique()
@@ -36,8 +45,13 @@ def build_characteristic_fig(
             for idx, cyc in enumerate(cycles):
                 tiny = df[df["cycle_number"] == cyc]
                 
-                # Prep Y values (Absolute for AI log scale)
-                y_vals = tiny[y_col].abs() if is_log else tiny[y_col]
+                # Data cleaning
+                y_vals = pd.to_numeric(tiny[y_col], errors="coerce")
+                if is_log:
+                    y_vals = y_vals.abs()
+                    all_y_vals.extend(y_vals[y_vals > 0].tolist())
+                else:
+                    all_y_vals.extend(y_vals.dropna().tolist())
 
                 fig.add_trace(
                     go.Scatter(
@@ -46,91 +60,60 @@ def build_characteristic_fig(
                         mode="lines",
                         line=dict(color=color, width=1.2),
                         opacity=0.5,
-                        name=s, # Show set name in legend
-                        legendgroup=s, # Clicking the legend toggles the whole set
-                        showlegend=(idx == 0 and y_col == "AI"), # Show each set once in legend
-                        visible=(y_col == "AI"), # Default to AI visible
-                        meta={"y": y_col, "set": s},
-                        hovertemplate=f"Set: {s}<br>Cycle: {cyc}<br>V: %{{x}}V<br>I: %{{y}}A<extra></extra>"
+                        name=s,
+                        legendgroup=s,
+                        showlegend=(idx == 0), # Only show set name once in legend
+                        hovertemplate=f"Set: {s}<br>Cycle: {cyc}<br>V: %{{x}}V<br>Y: %{{y}}<extra></extra>"
                     )
                 )
 
-    # 3. Axis Configurations
-    # AI Axis (Log)
-    tick_vals = [10.0**i for i in range(-15, 1)]
-    tick_text = [f"1e{i}" if i != 0 else "1" for i in range(-15, 1)]
-    
-    yaxis_ai = dict(
-        type="log",
-        tickmode="array",
-        tickvals=tick_vals,
-        ticktext=tick_text,
-        exponentformat="power",
-        title=y_label_map["AI"],
-        gridcolor="#E5E5E5",
-        minor=dict(showgrid=False)
-    )
-
-    # NORM_COND Axis (Linear)
-    yaxis_norm = dict(
-        type="linear",
-        title=y_label_map["NORM_COND"],
-        gridcolor="#E5E5E5",
-        zeroline=True,
-        zerolinecolor="gray",
-        autorange=True
-    )
-
-    # 4. Dropdown Buttons (Switching Y-Parameter only)
-    def get_vis(y_val: str) -> list[bool]:
-        # Returns True if trace belongs to the chosen parameter, regardless of set
-        return [tr.meta["y"] == y_val for tr in fig.data]
-
-    y_buttons = [
-        dict(
-            label="Current (AI)",
-            method="update",
-            args=[
-                {"visible": get_vis("AI"), "showlegend": [tr.meta["y"] == "AI" and fig.data.index(tr) % len(fig.data)//2 == 0 for tr in fig.data]}, # Internal logic to keep legend clean
-                {"yaxis": yaxis_ai, "title": "Characteristic Plot - Current (All Sets)"}
-            ],
-        ),
-        dict(
-            label="Conductance (NORM_COND)",
-            method="update",
-            args=[
-                {"visible": get_vis("NORM_COND")},
-                {"yaxis": yaxis_norm, "title": "Characteristic Plot - Conductance (All Sets)"}
-            ],
+        # X-Axis (Voltage)
+        fig.update_xaxes(
+            title_text="AV (V)",
+            autorange="reversed",
+            gridcolor="#E5E5E5",
+            zeroline=True,
+            zerolinecolor="gray"
         )
-    ]
 
-    # Special logic to ensure legend items update correctly when switching
-    # (Since we have duplicate names for AI and NORM_COND traces)
-    for i, tr in enumerate(fig.data):
-        # Only the first cycle of the first parameter (AI) gets a legend entry initially
-        if tr.meta["y"] == "NORM_COND":
-            # We hide legend for NORM_COND initially, it will be enabled via button args if needed
-            # but simpler is just to let them share the same legend groups.
-            pass
-
-    fig.update_layout(
-        updatemenus=[
-            dict(
-                buttons=y_buttons,
-                direction="down",
-                showactive=True,
-                x=1.02, xanchor="left",
-                y=1.1, yanchor="top",
+        # Y-Axis
+        if is_log:
+            yaxis_config = dict(
+                type="log",
+                tickmode="array",
+                tickvals=tick_vals,
+                ticktext=tick_text,
+                exponentformat="power",
+                gridcolor="#E5E5E5",
+                minor=dict(showgrid=False),
+                title_text=f"|{info['pretty']}|"
             )
-        ],
-        title="Characteristic Plot - Current (All Sets)",
-        xaxis=dict(title="AV (V)", autorange="reversed", gridcolor="#E5E5E5"),
-        yaxis=yaxis_ai,
-        width=1000,
-        height=700,
-        template="plotly_white",
-        legend=dict(groupclick="toggleitem", title="Files (Click to toggle)")
-    )
+            # Ensure visible grid lines
+            if all_y_vals:
+                lmin, lmax = np.log10(min(all_y_vals)), np.log10(max(all_y_vals))
+                if (lmax - lmin) < 1.0:
+                    mid = (lmin + lmax) / 2
+                    yaxis_config["range"] = [mid - 0.55, mid + 0.55]
+            fig.update_yaxes(**yaxis_config)
+        else:
+            fig.update_yaxes(
+                type="linear",
+                title_text=info['pretty'],
+                gridcolor="#E5E5E5",
+                zeroline=True,
+                zerolinecolor="gray",
+                autorange=True
+            )
 
-    return fig
+        fig.update_layout(
+            title=f"Characteristic Plot – {info['pretty']} (All Sets)",
+            width=1000,
+            height=700,
+            template="plotly_white",
+            legend=dict(groupclick="toggleitem", title="Files (Click to toggle)"),
+            meta={"param_id": y_col}
+        )
+
+        figures.append(fig)
+
+    return figures

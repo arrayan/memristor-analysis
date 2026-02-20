@@ -3,7 +3,7 @@ from __future__ import annotations
 from plotting.config import load_config
 from plotting.pipeline import load_all
 
-from plotting.fig_characteristic import build_characteristic_fig
+from plotting.fig_characteristic import build_characteristic_figs
 from plotting.fig_cdf import build_cdf_figs
 from plotting.fig_boxplots import build_boxplots_figs
 from plotting.fig_endurance import build_endurance_fig
@@ -19,10 +19,21 @@ def main() -> None:
     cfg = load_config()
     data = load_all(cfg)
 
-    #  Characteristic
-    fig = build_characteristic_fig(data.raw_characteristic, data.sets)
-    _write(fig, cfg.output_dir / cfg.characteristic_html)
+#  Characteristic
+    def write_characteristic_figs():
+        # Create the directory for characteristic plots
+        char_dir = cfg.output_dir / "characteristic_plots"
+        char_dir.mkdir(parents=True, exist_ok=True)
 
+        # Generate and Save
+        char_figs = build_characteristic_figs(data.raw_characteristic, data.sets)
+        for fig in char_figs:
+            pid = fig.layout.meta.get("param_id")
+            # Save as AI.html and NORM_COND.html
+            _write(fig, char_dir / f"{pid}.html")
+
+    write_characteristic_figs()
+    
 #  CDF
     # Create the directory
     cdf_dir = cfg.output_dir / "cdfs"
