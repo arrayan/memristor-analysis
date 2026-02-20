@@ -93,32 +93,32 @@ class NavigationBar(qt.QTabWidget):
         self.clear()
 
         if level_text == "Device Level":
-            # 1. Standard Tabs
-            viewer = PlotViewer()
-            if (self.temp_device_dir / "endurance_performance.html").exists():
-                viewer.load_html_file(str(self.temp_device_dir / "endurance_performance.html"))
-            self.addTab(viewer, "Endurance Performance")
+            # 1. Standard Individual Tabs (Remaining ones)
+            standard_tabs = {
+                "Device Correlation": "device_correlation_scatter.html", # Or move to nested if preferred
+            }
+            # Note: Since we nested almost everything, you might only have 1 or 2 left here.
 
-            # 2. Parameter Definitions for Nested Tabs
+            # 2. Define Parameter Labels for Nested Groups
             param_labels = {
-                "VSET": "V_set (V)", "V_reset": "V_reset (V)",
+                "V_set": "V_set (V)", "V_reset": "V_reset (V)",
                 "R_LRS": "R_LRS (Ω)", "R_HRS": "R_HRS (Ω)",
-                "I_reset_max": "I_reset_max (A)", "V_forming": "V_forming (V)",
+                "I_LRS": "I_LRS (A)", "I_HRS": "I_HRS (A)",
+                "I_reset_max": "I_reset_max (A)", "Memory_window": "Window (Ω)",
+                "VSET": "V_set (V)", "V_reset": "V_reset (V)", # Variants for Boxplots/CDFs
+                "V_forming": "V_forming (V)",
             }
             
             char_labels = {"AI": "Current (A)", "NORM_COND": "Conductance (S)"}
-
-            # Map for Correlation Pairs
+            
             corr_labels = {
-                "V_set_vs_I_HRS": "Vset vs IHRS",
-                "V_set_vs_R_HRS": "Vset vs RHRS",
-                "V_reset_vs_I_LRS": "Vreset vs ILRS",
-                "V_reset_vs_R_LRS": "Vreset vs RLRS",
-                "V_reset_vs_I_reset_max": "Vreset vs Ireset",
-                "V_set_vs_V_reset": "Vset vs Vreset",
+                "V_set_vs_I_HRS": "Vset vs IHRS", "V_set_vs_R_HRS": "Vset vs RHRS",
+                "V_reset_vs_I_LRS": "Vreset vs ILRS", "V_reset_vs_R_LRS": "Vreset vs RLRS",
+                "V_reset_vs_I_reset_max": "Vreset vs Ireset", "V_set_vs_V_reset": "Vset vs Vreset"
             }
 
             # 3. Create All Nested Tab Groups
+            self.addTab(self._create_nested_tab("endurance_performance", param_labels), "Endurance Performance")
             self.addTab(self._create_nested_tab("boxplots", param_labels), "Endurance Boxplots")
             self.addTab(self._create_nested_tab("cdfs", param_labels), "Endurance CDF")
             self.addTab(self._create_nested_tab("characteristic_plots", char_labels), "Characteristic Plots")

@@ -1,109 +1,120 @@
 from __future__ import annotations
-
+import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 import plotly.express as px
 
-
-def build_endurance_fig(end_df: "pd.DataFrame", sets: list[str]) -> go.Figure:
+def build_endurance_figs(end_df: "pd.DataFrame", sets: list[str]) -> list[go.Figure]:
     """
-    Endurance: performance parameter vs cycle number, dropdown for parameter.
-
-    Expects end_df columns (from transforms.build_endurance_table):
-      source_file, cycle_number, V_set, V_reset, I_LRS, I_HRS, R_LRS, R_HRS, I_reset_max, Memory_window
+    Creates a list of Endurance Figures (one per parameter).
+    - R, I, and Memory Window use Log Scale.
+    - Voltages use Linear Scale.
+    - All sets (files) are displayed in the same plot.
     """
-    fig = go.Figure()
-
     if end_df is None or end_df.empty or not sets:
-        fig.update_layout(title="Endurance – no data")
-        return fig
+        return []
 
     param_map = {
-        "V_set": {"pretty": "V_set (V)"},
-        "V_reset": {"pretty": "V_reset (V)"},
-        "I_LRS": {"pretty": "I_LRS (A)"},
-        "I_HRS": {"pretty": "I_HRS (A)"},
-        "R_LRS": {"pretty": "R_LRS (Ω)"},
-        "R_HRS": {"pretty": "R_HRS (Ω)"},
-        "I_reset_max": {"pretty": "I_reset_max (A)"},
-        "Memory_window": {"pretty": "Memory Window (Ω)"},
+        "V_set":         {"pretty": "V_set (V)",          "scale": "linear"},
+        "V_reset":       {"pretty": "V_reset (V)",        "scale": "linear"},
+        "I_LRS":         {"pretty": "I_LRS (A)",          "scale": "log"},
+        "I_HRS":         {"pretty": "I_HRS (A)",          "scale": "log"},
+        "R_LRS":         {"pretty": "R_LRS (Ω)",          "scale": "log"},
+        "R_HRS":         {"pretty": "R_HRS (Ω)",          "scale": "log"},
+        "I_reset_max":   {"pretty": "I_reset_max (A)",    "scale": "log"},
+        "Memory_window": {"pretty": "Memory Window (Ω)", "scale": "log"},
     }
 
-    first_param = "V_set" if "V_set" in param_map else next(iter(param_map))
+    cols = px.colors.qualitative.Plotly
+    color_map = {s: cols[i % len(cols)] for i, s in enumerate(sets)}
 
-    cols = px.colors.sample_colorscale("Viridis", max(len(sets), 2))
-    color_map = {s: cols[i] for i, s in enumerate(sets)}
+    # Major Magnitude Log Ticks
+    tick_vals = [10.0**i for i in range(-15, 16)]
+    tick_text = [f"1e{i}" if i != 0 else "1" for i in range(-15, 16)]
 
-    for param in param_map.keys():
+    figures = []
+
+    for param, info in param_map.items():
+        if param not in end_df.columns:
+            continue
+
+        fig = go.Figure()
+        is_log = (info["scale"] == "log")
+        has_any_data = False
+        all_y_vals = []
+
         for s in sets:
-            df_s = end_df[end_df["source_file"] == s]
-            if df_s.empty or param not in df_s.columns:
-                fig.add_trace(
-                    go.Scatter(
-                        x=[],
-                        y=[],
-                        mode="lines+markers",
-                        name=s,
-                        visible=(param == first_param),
-                        meta={"param": param},
-                        line=dict(color=color_map.get(s, None), width=2),
-                        marker=dict(size=5),
-                        showlegend=True,
-                    )
-                )
-                continue
+            df_s = end_df[end_df["source_file"] == s].copy()
+            if df_s.empty: continue
 
-            fig.add_trace(
-                go.Scatter(
-                    x=df_s["cycle_number"],
-                    y=df_s[param],
+            # Prepare data
+            x = df_s["cycle_number"]
+            y = pd.to_numeric(df_s[param], errors="coerce")
+
+            if is_log:
+                y = y.abs()
+                valid_y = y[y > 0].dropna()
+                all_y_vals.extend(valid_y.tolist())
+            else:
+                all_y_vals.extend(y.dropna().tolist())
+
+            if not x.empty:
+                has_any_data = True
+                fig.add_trace(go.Scatter(
+                    x=x,
+                    y=y,
                     mode="lines+markers",
                     name=s,
-                    visible=(param == first_param),
-                    meta={"param": param},
-                    line=dict(color=color_map.get(s, None), width=2),
+                    line=dict(color=color_map.get(s), width=2),
                     marker=dict(size=5),
-                    hovertemplate="Cycle %{x}<br>%{y}<extra></extra>",
-                )
+                    hovertemplate=f"File: {s}<br>Cycle: %{{x}}<br>{info['pretty']}: %{{y}}<extra></extra>"
+                ))
+
+        # --- Axis Configuration ---
+        if is_log:
+            yaxis_config = dict(
+                type="log",
+                tickmode="array",
+                tickvals=tick_vals,
+                ticktext=tick_text,
+                exponentformat="power",
+                title_text=f"|{info['pretty']}|",
+                gridcolor="#E5E5E5",
+                minor=dict(showgrid=False),
+                zeroline=False
+            )
+            # Force range logic: ensure at least one decade is visible
+            if all_y_vals:
+                lmin, lmax = np.log10(min(all_y_vals)), np.log10(max(all_y_vals))
+                if (lmax - lmin) < 1.0:
+                    mid = (lmin + lmax) / 2
+                    yaxis_config["range"] = [mid - 0.55, mid + 0.55]
+            fig.update_yaxes(**yaxis_config)
+        else:
+            fig.update_yaxes(
+                type="linear",
+                title_text=info['pretty'],
+                gridcolor="#E5E5E5",
+                zeroline=True,
+                zerolinecolor="gray",
+                autorange=True
             )
 
-    def vis_for(param_val: str) -> list[bool]:
-        return [tr.meta["param"] == param_val for tr in fig.data]
+        fig.update_xaxes(title_text="Cycle Number", gridcolor="#E5E5E5")
 
-    buttons = []
-    for param, info in param_map.items():
-        buttons.append(
-            dict(
-                label=info["pretty"],
-                method="update",
-                args=[
-                    {"visible": vis_for(param)},
-                    {
-                        "title": f"Endurance – {info['pretty']}",
-                        "yaxis.title.text": info["pretty"],
-                    },
-                ],
-            )
+        # --- Layout ---
+        fig.update_layout(
+            title=f"Endurance Performance – {info['pretty']}",
+            width=900,
+            height=600,
+            template="plotly_white",
+            showlegend=True,
+            meta={"param_id": param}
         )
 
-    fig.update_layout(
-        updatemenus=[
-            dict(
-                buttons=buttons,
-                direction="down",
-                showactive=True,
-                x=1.02,
-                xanchor="left",
-                y=1.15,
-                yanchor="top",
-            )
-        ],
-        title=f"Endurance – {param_map[first_param]['pretty']}",
-        xaxis_title="Cycle Number",
-        yaxis_title=param_map[first_param]["pretty"],
-        width=900,
-        height=600,
-        hovermode="x unified",
-    )
+        if not has_any_data:
+            fig.add_annotation(text="No data", xref="paper", yref="paper", x=0.5, y=0.5, showarrow=False)
 
-    return fig
+        figures.append(fig)
+
+    return figures
