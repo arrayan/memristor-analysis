@@ -27,9 +27,24 @@ def main() -> None:
     fig = build_cdf_fig(data.cdf_table, data.sets)
     _write(fig, cfg.output_dir / cfg.cdf_html)
 
-    #  Boxplots
-    fig = build_boxplots_fig(data.box_table, data.sets)
-    _write(fig, cfg.output_dir / cfg.boxplots_html)
+    
+    # 1. Define and create the output directory
+    boxplot_dir = cfg.output_dir / "boxplots"
+    boxplot_dir.mkdir(parents=True, exist_ok=True)
+
+    # 2. Generate the figures
+    figs = build_boxplots_fig(data.box_table, data.sets)
+
+    # 3. Save each figure to its own file in the new directory
+    for fig in figs:
+        # Extract the parameter name we stored in meta (e.g., "VSET", "R_LRS")
+        param_id = fig.layout.meta.get("param_id", "plot")
+        
+        # Define the final path: cfg.output_dir / boxplots / VSET.html
+        target_path = boxplot_dir / f"{param_id}.html"
+        
+        # Write the file
+        _write(fig, target_path)
 
     #  Endurance performance vs cycle
     fig = build_endurance_fig(data.end_df, data.sets)

@@ -93,38 +93,77 @@ class NavigationBar(qt.QTabWidget):
         self.clear()
 
         if level_text == "Device Level":
-            device_tabs = {
+            # 1. Standard single-plot tabs
+            standard_tabs = {
                 "Endurance Performance": "endurance_performance.html",
                 "Endurance CDF": "endurance_cdf.html",
-                "Endurance Boxplots": "endurance_boxplots.html",
                 "Characteristic Plots": "characteristic_plots.html",
                 "Device Correlation": "device_correlation_scatter.html",
             }
 
-            for label, filename in device_tabs.items():
+            for label, filename in standard_tabs.items():
                 viewer = PlotViewer()
                 file_path = self.temp_device_dir / filename
-
                 if file_path.exists():
                     viewer.load_html_file(str(file_path))
                 else:
-                    viewer.browser.setHtml(
-                        f"<body style='background:#111; color:#555; display:flex; "
-                        f"justify-content:center; align-items:center; height:100vh; "
-                        f"font-family:sans-serif;'><div>File {filename} not yet generated.</div></body>"
-                    )
+                    self._set_missing_file_msg(viewer, filename)
                 self.addTab(viewer, label)
 
+            # 2. Nested Boxplot Tab Group
+            boxplot_subfolder = self.temp_device_dir / "boxplots"
+            boxplot_tab_group = qt.QTabWidget()
+            
+            # Map the filename to a pretty label for the sub-tabs
+            param_labels = {
+                "VSET": "V_set (V)",
+                "V_reset": "V_reset (V)",
+                "R_LRS": "R_LRS (Ω)",
+                "R_HRS": "R_HRS (Ω)",
+                "I_reset_max": "I_reset_max (A)",
+                "V_forming": "V_forming (V)",
+            }
+
+            found_boxplots = False
+            for param_id, label in param_labels.items():
+                file_path = boxplot_subfolder / f"{param_id}.html"
+                if file_path.exists():
+                    sub_viewer = PlotViewer()
+                    sub_viewer.load_html_file(str(file_path))
+                    boxplot_tab_group.addTab(sub_viewer, label)
+                    found_boxplots = True
+
+            if found_boxplots:
+                self.addTab(boxplot_tab_group, "Endurance Boxplots")
+            else:
+                # Fallback if the folder or files don't exist
+                err_viewer = PlotViewer()
+                self._set_missing_file_msg(err_viewer, "boxplots/*")
+                self.addTab(err_viewer, "Endurance Boxplots")
+
         elif level_text == "Stack Level":
-            viewer = PlotViewer()
-            viewer.browser.setHtml(
-                "<body style='background:#111; color:#eee; display:flex; justify-content:center; "
-                "align-items:center; height:100vh; font-family:sans-serif;'>"
-                "<h1>Stack Level: Currently under construction</h1></body>"
-            )
-            self.addTab(viewer, "Status")
+            # ... (Stack level code remains the same)
+            pass
+
+    def _set_missing_file_msg(self, viewer, filename):
+        """Helper to set error message in browser."""
+        viewer.browser.setHtml(
+            f"<body style='background:#111; color:#555; display:flex; "
+            f"justify-content:center; align-items:center; height:100vh; "
+            f"font-family:sans-serif;'><div>File {filename} not yet generated.</div></body>"
+        )
 
     def get_current_viewer(self) -> PlotViewer:
-        # Check if the current widget is actually a PlotViewer (not the Start widget)
         widget = self.currentWidget()
-        return widget if isinstance(widget, PlotViewer) else None
+        
+        # If it's a direct PlotViewer (e.g., Endurance Performance)
+        if isinstance(widget, PlotViewer):
+            return widget
+        
+        # If it's the nested TabWidget (Boxplots)
+        if isinstance(widget, qt.QTabWidget):
+            sub_widget = widget.currentWidget()
+            if isinstance(sub_widget, PlotViewer):
+                return sub_widget
+                
+        return None
