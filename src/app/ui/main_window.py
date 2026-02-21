@@ -46,6 +46,85 @@ class MainWindow(qt.QMainWindow):
         menu_actions[MenuAction.SCALE_LOG].triggered.connect(
             lambda: self.apply_to_active(lambda v: v.set_scale("log"))
         )
+        menu_actions[MenuAction.EXPORT_CURRENT_PNG].triggered.connect(
+            lambda: self.export_current("png")
+        )
+
+        menu_actions[MenuAction.EXPORT_CURRENT_JPEG].triggered.connect(
+            lambda: self.export_current("jpeg")
+        )
+
+        menu_actions[MenuAction.EXPORT_CURRENT_EPS].triggered.connect(
+            lambda: self.export_current("eps")
+        )
+
+        menu_actions[MenuAction.EXPORT_ALL_PNG].triggered.connect(
+            lambda: self.export_all("png")
+        )
+
+        menu_actions[MenuAction.EXPORT_ALL_JPEG].triggered.connect(
+            lambda: self.export_all("jpeg")
+        )
+
+        menu_actions[MenuAction.EXPORT_ALL_EPS].triggered.connect(
+            lambda: self.export_all("eps")
+        )
+
+    def export_current(self, fmt: str):
+
+        viewer = self.nav_bar.get_current_viewer()
+
+        if viewer is None:
+            qt.QMessageBox.warning(self, "Export", "No plot selected")
+            return
+
+        file_path, _ = qt.QFileDialog.getSaveFileName(
+            self, "Export Plot", f"plot.{fmt}", f"{fmt.upper()} Files (*.{fmt})"
+        )
+
+        if not file_path:
+            return
+
+        fig = self._get_figure(viewer)
+
+        if fig is None:
+            qt.QMessageBox.warning(self, "Export", "No figure available")
+            return
+
+        self._write_figure(fig, file_path)
+
+    def export_all(self, fmt: str):
+
+        folder = qt.QFileDialog.getExistingDirectory(self, "Select Export Folder")
+
+        if not folder:
+            return
+
+        viewers = self.nav_bar.get_all_viewers()
+
+        if not viewers:
+            qt.QMessageBox.warning(self, "Export", "No plots loaded")
+            return
+
+        for i, viewer in enumerate(viewers):
+            fig = self._get_figure(viewer)
+
+            if fig is None:
+                continue
+
+            path = Path(folder) / f"plot_{i}.{fmt}"
+
+            self._write_figure(fig, path)
+
+    def _get_figure(self, viewer):
+
+        if hasattr(viewer, "get_figure"):
+            return viewer.get_figure()
+
+        if hasattr(viewer, "figure"):
+            return viewer.figure
+
+        return None
 
     def handle_import(self, mode: Mode):
         folder = qt.QFileDialog.getExistingDirectory(

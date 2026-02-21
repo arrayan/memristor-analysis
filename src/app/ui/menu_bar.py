@@ -42,7 +42,7 @@ class MenuBar(qt.QMenuBar):
             self.menu_actions[MenuAction.EXPORT_ALL_JPEG]
         )
         self.file_sub_menu_export_all.addAction(
-            self.menu_actions[MenuAction.EXPORT_ALL_APS]
+            self.menu_actions[MenuAction.EXPORT_ALL_EPS]
         )
         self.file_sub_menu_export_current.addAction(
             self.menu_actions[MenuAction.EXPORT_CURRENT_PNG]
@@ -51,7 +51,7 @@ class MenuBar(qt.QMenuBar):
             self.menu_actions[MenuAction.EXPORT_CURRENT_JPEG]
         )
         self.file_sub_menu_export_current.addAction(
-            self.menu_actions[MenuAction.EXPORT_CURRENT_APS]
+            self.menu_actions[MenuAction.EXPORT_CURRENT_EPS]
         )
         self.file_menu.addAction(self.menu_actions[MenuAction.EXPORT_ALL])
         self.file_menu.addAction(self.menu_actions[MenuAction.EXPORT_CURRENT])
