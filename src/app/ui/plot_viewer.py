@@ -1,5 +1,5 @@
 from PySide6.QtWebEngineWidgets import QWebEngineView
-from PySide6.QtWidgets import QVBoxLayout, QWidget, QFileDialog
+from PySide6.QtWidgets import QVBoxLayout, QWidget
 from PySide6.QtCore import QUrl
 from pathlib import Path
 import plotly.io as pio
