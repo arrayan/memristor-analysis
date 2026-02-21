@@ -1,110 +1,138 @@
 from __future__ import annotations
-
+import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 import plotly.express as px
 
 
-def build_boxplots_fig(box_table: "pd.DataFrame", sets: list[str]) -> go.Figure:
+def build_boxplots_figs(box_table: "pd.DataFrame", sets: list[str]) -> list[go.Figure]:
     """
-    Boxplots with a dropdown for parameter.
+    Creates a list of plotly Figure objects, one for each parameter.
 
-    Expects box_table columns (from transforms.build_box_table / build_cdf_table):
-      source_file, cycle_number, VSET, R_LRS, R_HRS, V_reset, I_reset_max, V_forming
+    Features:
+    - R_LRS, R_HRS, and I_reset_max use Log Scale.
+    - Voltages (VSET, V_reset, V_forming) use Linear Scale.
+    - Log scales are forced to display at least one major magnitude grid line.
     """
-    fig = go.Figure()
-
     if box_table is None or box_table.empty or not sets:
-        fig.update_layout(title="Boxplot – no data")
-        return fig
+        return []
 
+    # 1. Define Scale Requirements
     param_map = {
-        "VSET": {"pretty": "V_set (V)"},
-        "V_reset": {"pretty": "V_reset (V)"},
-        "R_LRS": {"pretty": "R_LRS (Ω)"},
-        "R_HRS": {"pretty": "R_HRS (Ω)"},
-        "I_reset_max": {"pretty": "I_reset_max (A)"},
-        "V_forming": {"pretty": "V_forming (V)"},
+        "VSET": {"pretty": "V_set (V)", "scale": "linear"},
+        "V_reset": {"pretty": "V_reset (V)", "scale": "linear"},
+        "R_LRS": {"pretty": "R_LRS (Ω)", "scale": "log"},
+        "R_HRS": {"pretty": "R_HRS (Ω)", "scale": "log"},
+        "I_reset_max": {"pretty": "I_reset_max (A)", "scale": "log"},
+        "V_forming": {"pretty": "V_forming (V)", "scale": "linear"},
     }
 
-    first_param = "VSET" if "VSET" in param_map else next(iter(param_map))
-
-    # one color per set
     cols = px.colors.sample_colorscale("Viridis", max(len(sets), 2))
     color_map = {s: cols[i] for i, s in enumerate(sets)}
 
-    for param in param_map.keys():
+    # Major Magnitude Ticks only (10^n)
+    tick_vals = [10.0**i for i in range(-15, 16)]
+    tick_text = [f"1e{i}" if i != 0 else "1" for i in range(-15, 16)]
+
+    figures = []
+
+    for param, info in param_map.items():
+        if param not in box_table.columns:
+            continue
+
+        fig = go.Figure()
+        is_log = info["scale"] == "log"
+        has_any_data = False
+        all_vals_for_param = []  # Used to calculate forced log range
+
         for s in sets:
             df_s = box_table[box_table["source_file"] == s]
-            vals = (
-                pd.to_numeric(df_s[param], errors="coerce").dropna()
-                if param in df_s.columns
-                else pd.Series(dtype=float)
-            )
-            if vals.empty:
-                # still create an “empty” trace so visibility logic stays consistent
-                fig.add_trace(
-                    go.Box(
-                        y=[],
-                        name=s,
-                        marker_color=color_map.get(s, None),
-                        visible=(param == first_param),
-                        meta={"param": param},
-                        showlegend=False,
-                    )
-                )
-                continue
+            vals = pd.to_numeric(df_s[param], errors="coerce").dropna()
+
+            if is_log:
+                # Log cleaning: Absolute magnitude and remove non-positive
+                vals = vals.abs()
+                vals = vals[vals > 0]
+
+            if not vals.empty:
+                has_any_data = True
+                all_vals_for_param.extend(vals.tolist())
 
             fig.add_trace(
                 go.Box(
                     y=vals,
                     name=s,
+                    marker_color=color_map.get(s),
                     boxmean=False,
-                    marker_color=color_map.get(s, None),
                     line=dict(width=2),
-                    visible=(param == first_param),
-                    meta={"param": param},
+                    fillcolor=color_map.get(s),
+                    opacity=0.7,
                 )
             )
 
-    def vis_for(param_val: str) -> list[bool]:
-        return [tr.meta["param"] == param_val for tr in fig.data]
-
-    buttons = []
-    for param, info in param_map.items():
-        buttons.append(
-            dict(
-                label=info["pretty"],
-                method="update",
-                args=[
-                    {"visible": vis_for(param)},
-                    {
-                        "title": f"Boxplot – {info['pretty']}",
-                        "yaxis.title.text": info["pretty"],
-                    },
-                ],
+        # --- Y-Axis Configuration ---
+        if is_log:
+            yaxis_config = dict(
+                type="log",
+                tickmode="array",
+                tickvals=tick_vals,
+                ticktext=tick_text,
+                title_text=f"|{info['pretty']}|",
+                exponentformat="power",
+                showgrid=True,
+                gridcolor="#E5E5E5",
+                minor=dict(showgrid=False),  # Keep it clean without .5 lines
+                zeroline=False,
             )
+
+            # FORCE RANGE LOGIC: Ensure at least one magnitude is visible
+            if all_vals_for_param:
+                lmin = np.log10(min(all_vals_for_param))
+                lmax = np.log10(max(all_vals_for_param))
+
+                # If the span is tight, expand it to 1.1 decades
+                # to guarantee a major grid line (1eX) appears
+                if (lmax - lmin) < 1.0:
+                    mid = (lmin + lmax) / 2
+                    yaxis_config["range"] = [mid - 0.55, mid + 0.55]
+                else:
+                    yaxis_config["autorange"] = True
+
+            fig.update_yaxes(**yaxis_config)
+        else:
+            # Linear Axis Configuration
+            fig.update_yaxes(
+                type="linear",
+                title_text=info["pretty"],
+                autorange=True,
+                showgrid=True,
+                gridcolor="#E5E5E5",
+                zeroline=True,
+                zerolinecolor="gray",
+            )
+
+        fig.update_xaxes(title_text="Set / File", showgrid=True, gridcolor="#E5E5E5")
+
+        fig.update_layout(
+            title=f"Boxplot – {info['pretty']} ({info['scale'].capitalize()} Scale)",
+            width=900,
+            height=600,
+            template="plotly_white",
+            showlegend=True,
+            boxmode="group",
+            meta={"param_id": param},
         )
 
-    fig.update_layout(
-        updatemenus=[
-            dict(
-                buttons=buttons,
-                direction="down",
-                showactive=True,
-                x=1.02,
-                xanchor="left",
-                y=1.15,
-                yanchor="top",
+        if not has_any_data:
+            fig.add_annotation(
+                text="No valid data found",
+                xref="paper",
+                yref="paper",
+                x=0.5,
+                y=0.5,
+                showarrow=False,
             )
-        ],
-        title=f"Boxplot – {param_map[first_param]['pretty']}",
-        xaxis_title="Set / File",
-        yaxis_title=param_map[first_param]["pretty"],
-        yaxis_type="log" if "R_LRS" in param_map else "linear",
-        width=900,
-        height=600,
-        boxmode="group",
-    )
 
-    return fig
+        figures.append(fig)
+
+    return figures

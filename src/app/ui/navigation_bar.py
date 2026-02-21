@@ -93,38 +93,115 @@ class NavigationBar(qt.QTabWidget):
         self.clear()
 
         if level_text == "Device Level":
-            device_tabs = {
-                "Endurance Performance": "endurance_performance.html",
-                "Endurance CDF": "endurance_cdf.html",
-                "Endurance Boxplots": "endurance_boxplots.html",
-                "Characteristic Plots": "characteristic_plots.html",
-                "Device Correlation": "device_correlation_scatter.html",
+            # Define Parameter Labels for Nested Groups
+            param_labels = {
+                "V_set": "V Set",
+                "V_reset": "V Reset",
+                "R_LRS": "R LRS",
+                "R_HRS": "R HRS",
+                "I_LRS": "I LRS",
+                "I_HRS": "I HRS",
+                "I_reset_max": "I Reset Max",
+                "Memory_window": "Memory Window",
+                "VSET": "V Set",  # "V_reset": "V Reset",
+                "V_forming": "V Forming",
             }
 
-            for label, filename in device_tabs.items():
+            char_labels = {"AI": "Current (A)", "NORM_COND": "Conductance (S)"}
+
+            corr_labels = {
+                "V_set_vs_I_HRS": "Vset vs IHRS",
+                "V_set_vs_R_HRS": "Vset vs RHRS",
+                "V_reset_vs_I_LRS": "Vreset vs ILRS",
+                "V_reset_vs_R_LRS": "Vreset vs RLRS",
+                "V_reset_vs_I_reset_max": "Vreset vs Ireset",
+                "V_set_vs_V_reset": "Vset vs Vreset",
+            }
+
+            # 3. Create All Nested Tab Groups
+            self.addTab(
+                self._create_nested_tab("endurance_performance", param_labels),
+                "Endurance Performance",
+            )
+            self.addTab(
+                self._create_nested_tab("boxplots", param_labels), "Endurance Boxplots"
+            )
+            self.addTab(self._create_nested_tab("cdfs", param_labels), "Endurance CDF")
+            self.addTab(
+                self._create_nested_tab("characteristic_plots", char_labels),
+                "Characteristic Plots",
+            )
+            self.addTab(
+                self._create_nested_tab("correlation_plots", corr_labels),
+                "Device Correlation",
+            )
+
+    def _create_nested_tab(self, subfolder_name, labels_map):
+        """Helper to create a QTabWidget from a subfolder of HTML files."""
+        sub_tab_widget = qt.QTabWidget()
+        folder_path = self.temp_device_dir / subfolder_name
+
+        found_any = False
+        for param_id, label in labels_map.items():
+            file_path = folder_path / f"{param_id}.html"
+            if file_path.exists():
                 viewer = PlotViewer()
-                file_path = self.temp_device_dir / filename
+                viewer.load_html_file(str(file_path))
+                sub_tab_widget.addTab(viewer, label)
+                found_any = True
 
-                if file_path.exists():
-                    viewer.load_html_file(str(file_path))
-                else:
-                    viewer.browser.setHtml(
-                        f"<body style='background:#111; color:#555; display:flex; "
-                        f"justify-content:center; align-items:center; height:100vh; "
-                        f"font-family:sans-serif;'><div>File {filename} not yet generated.</div></body>"
-                    )
-                self.addTab(viewer, label)
-
-        elif level_text == "Stack Level":
+        if not found_any:
+            # Fallback if folder is empty or files missing
             viewer = PlotViewer()
             viewer.browser.setHtml(
-                "<body style='background:#111; color:#eee; display:flex; justify-content:center; "
-                "align-items:center; height:100vh; font-family:sans-serif;'>"
-                "<h1>Stack Level: Currently under construction</h1></body>"
+                "<body style='background:#111; color:#555; display:flex; justify-content:center; align-items:center; height:100vh;'><div>No data available.</div></body>"
             )
-            self.addTab(viewer, "Status")
+            sub_tab_widget.addTab(viewer, "Empty")
+
+        return sub_tab_widget
+
+    def _create_nested_tab(self, subfolder_name, labels_map):
+        """Helper to create a QTabWidget from a subfolder of HTML files."""
+        sub_tab_widget = qt.QTabWidget()
+        folder_path = self.temp_device_dir / subfolder_name
+
+        found_any = False
+        for param_id, label in labels_map.items():
+            file_path = folder_path / f"{param_id}.html"
+            if file_path.exists():
+                viewer = PlotViewer()
+                viewer.load_html_file(str(file_path))
+                sub_tab_widget.addTab(viewer, label)
+                found_any = True
+
+        if not found_any:
+            viewer = PlotViewer()
+            viewer.browser.setHtml(
+                "<body style='background:#111; color:#555;'><div>No data.</div></body>"
+            )
+            sub_tab_widget.addTab(viewer, "Empty")
+
+        return sub_tab_widget
+
+    def _set_missing_file_msg(self, viewer, filename):
+        """Helper to set error message in browser."""
+        viewer.browser.setHtml(
+            f"<body style='background:#111; color:#555; display:flex; "
+            f"justify-content:center; align-items:center; height:100vh; "
+            f"font-family:sans-serif;'><div>File {filename} not yet generated.</div></body>"
+        )
 
     def get_current_viewer(self) -> PlotViewer:
-        # Check if the current widget is actually a PlotViewer (not the Start widget)
         widget = self.currentWidget()
-        return widget if isinstance(widget, PlotViewer) else None
+
+        # If it's a direct PlotViewer (e.g., Endurance Performance)
+        if isinstance(widget, PlotViewer):
+            return widget
+
+        # If it's the nested TabWidget (Boxplots)
+        if isinstance(widget, qt.QTabWidget):
+            sub_widget = widget.currentWidget()
+            if isinstance(sub_widget, PlotViewer):
+                return sub_widget
+
+        return None
