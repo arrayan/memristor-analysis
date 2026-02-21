@@ -13,12 +13,14 @@ from .fig_correlation import build_correlation_scatter_figs
 def _write(fig, out_path) -> None:
     fig.write_html(out_path)
     print("Wrote:", out_path)
-    
-#generating a JSON for Export
+
+
+# generating a JSON for Export
 def _write_json(fig, out_path) -> None:
     out_path.write_text(fig.to_json(), encoding="utf-8")
     print("Wrote:", out_path)
-    
+
+
 def main() -> None:
     cfg = load_config()
     data = load_all(cfg)

@@ -205,10 +205,10 @@ class NavigationBar(qt.QTabWidget):
                 return sub_widget
 
         return None
-    
+
     def get_all_viewers(self) -> list[PlotViewer]:
         viewers = []
- 
+
         for i in range(self.count()):
             widget = self.widget(i)
 

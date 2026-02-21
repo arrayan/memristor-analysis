@@ -46,8 +46,8 @@ class MainWindow(qt.QMainWindow):
         menu_actions[MenuAction.SCALE_LOG].triggered.connect(
             lambda: self.apply_to_active(lambda v: v.set_scale("log"))
         )
-        
-        #Export menu for current and all
+
+        # Export menu for current and all
         menu_actions[MenuAction.EXPORT_CURRENT_PNG].triggered.connect(
             lambda checked=False: self.export_current("png")
         )
@@ -101,9 +101,7 @@ class MainWindow(qt.QMainWindow):
 
     def export_all(self, fmt: str):
 
-        folder = qt.QFileDialog.getExistingDirectory(
-            self, "Select Export Folder"
-        )
+        folder = qt.QFileDialog.getExistingDirectory(self, "Select Export Folder")
 
         if not folder:
             return
@@ -115,7 +113,6 @@ class MainWindow(qt.QMainWindow):
             return
 
         for i, viewer in enumerate(viewers):
-
             if getattr(viewer, "html_path", None):
                 filename = Path(viewer.html_path).stem
             else:
@@ -124,8 +121,8 @@ class MainWindow(qt.QMainWindow):
             path = Path(folder) / f"{filename}.{fmt}"
 
             viewer.export_image(str(path), fmt)
-    
-    #Helper to get the figure 
+
+    # Helper to get the figure
     def _get_figure(self, viewer):
 
         if hasattr(viewer, "get_figure"):
@@ -135,27 +132,23 @@ class MainWindow(qt.QMainWindow):
             return viewer.figure
 
         return None
-    
-    #Helper to save the figure
+
+    # Helper to save the figure
     def _write_figure(self, fig, path):
 
         path = str(path)
 
-    # Plotly
+        # Plotly
         if hasattr(fig, "write_image"):
             fig.write_image(path)
             return
 
-    # Matplotlib
+        # Matplotlib
         if hasattr(fig, "savefig"):
             fig.savefig(path)
             return
 
-        qt.QMessageBox.warning(
-            self,
-            "Export",
-            "Unsupported figure type"
-        )
+        qt.QMessageBox.warning(self, "Export", "Unsupported figure type")
 
     def handle_import(self, mode: Mode):
         folder = qt.QFileDialog.getExistingDirectory(
