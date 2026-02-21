@@ -1,6 +1,8 @@
 from PySide6.QtWebEngineWidgets import QWebEngineView
 from PySide6.QtWidgets import QVBoxLayout, QWidget, QFileDialog
 from PySide6.QtCore import QUrl
+from pathlib import Path
+import plotly.io as pio
 import os
 
 
@@ -8,6 +10,7 @@ class PlotViewer(QWidget):
     def __init__(self, figure=None):
         super().__init__()
         self.figure = figure
+        self.html_path: str | None = None
         self.main_layout = QVBoxLayout(self)
         self.main_layout.setContentsMargins(0, 0, 0, 0)  # Remove padding
 
@@ -33,6 +36,8 @@ class PlotViewer(QWidget):
         Testing Method: Loads a local .html file directly into the browser.
         """
         if os.path.exists(file_path):
+            #storing path
+            self.html_path = file_path
             # Convert absolute path to a URL format the browser understands
             local_url = QUrl.fromLocalFile(os.path.abspath(file_path))
             self.browser.load(local_url)
@@ -45,13 +50,22 @@ class PlotViewer(QWidget):
             self.figure.update_layout(yaxis_type=scale_type)
             self.render_plot()
 
-    def export_image(self):
-        """Opens a dialog to save the current figure"""
-        if self.figure is None:
-            return
+    def export_image(self, out_path: str, fmt: str) -> bool:
+         fmt = fmt.lower().strip()
 
-        path, _ = QFileDialog.getSaveFileName(
-            self, "Save Plot", "", "PNG (*.png);;JPG (*.jpg);;PDF (*.pdf)"
-        )
-        if path:
-            self.figure.write_image(path)
+    # in case of a live figure
+         if self.figure is not None:
+            self.figure.write_image(out_path, format=fmt)
+            return True
+
+    # Otherwise export from sidecar JSON next to the loaded HTML
+         if not self.html_path:
+            return False
+
+         json_path = Path(self.html_path).with_suffix(".json")
+         if not json_path.exists():
+            return False
+
+         fig = pio.from_json(json_path.read_text(encoding="utf-8"))
+         fig.write_image(out_path, format=fmt)
+         return True
