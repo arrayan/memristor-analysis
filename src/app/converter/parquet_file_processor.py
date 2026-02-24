@@ -22,6 +22,6 @@ class ParquetFileProcessor:
 
         end = time.time()
 
-        result.elapsed = end - start
+        result.elapsed_ms = end - start
 
         return result

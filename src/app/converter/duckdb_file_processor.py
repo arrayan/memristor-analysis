@@ -14,7 +14,7 @@ class DuckDBFileProcessor:
         start = time.time()
 
         try:
-            connection = duckdb.connect(str(file_path))
+            connection = duckdb.connect("memristor.duckdb")
             tables = connection.execute("show tables").fetchall()
 
             if tables:
@@ -29,6 +29,6 @@ class DuckDBFileProcessor:
 
         end = time.time()
 
-        result.elapsed = end - start
+        result.elapsed_ms = end - start
 
         return result

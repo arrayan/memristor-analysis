@@ -1,7 +1,7 @@
 from pathlib import Path
 import polars as pl
 import duckdb
-
+from .duckdb_file_processor import DuckDBFileProcessor
 
 class FormatConverter:
     """ways to convert --parquet or --duck db files to .csv .txt or excel"""
@@ -20,26 +20,16 @@ class FormatConverter:
 
         # -------- duckdb --------
         elif suffix == ".duckdb":
-            connection = duckdb.connect(str(input_path))
-            tables = connection.execute("show tables").fetchall()
+            processor = DuckDBFileProcessor()
+            result = processor.process(str(input_path))
 
-            data = {}
+            if result.cycles_df is None:
+                raise ValueError("No data in DuckDB file")
 
-            for table in tables:
-                table_name = table[0]
-                data_frame = connection.execute(f"SELECT * FROM {table_name}").pl()
-                data[table_name] = data_frame
-
-            connection.close()
-
-            if not data:
-                raise ValueError("No tables in DuckDB file")
-
-            first_data_frame = list(data.values())[0]
-            self._write(first_data_frame, output_path)
+            self._write(result.cycles_df, output_path)
 
         else:
-            raise ValueError("false format")
+            raise ValueError(f"Unsupported file format '{suffix}'. ""Expected '.parquet' or '.duckdb'.")
 
         return output_path
 

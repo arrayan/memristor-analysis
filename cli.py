@@ -2,7 +2,7 @@
 import argparse
 
 from app.converter import convert_single, batch_convert, export_to_parquet
-from app.converter.formatConverter import FormatConverter
+from app.converter.format_converter import FormatConverter
 from pathlib import Path
 
 
@@ -26,6 +26,15 @@ Examples:
   
   # Export to Parquet as well
   python cli.py "data/*.xlsx" --batch --parquet
+  
+  # Convert DuckDB to CSV
+  python cli.py data/file.duckdb --convert -o output.csv
+  
+  # Convert Parquet to TXT
+  python cli.py data/file.parquet --convert -o output.txt
+  
+  # Convert DuckDB to XLSX
+  python cli.py data/file.duckdb --convert -o output.xlsx
         """,
     )
     parser.add_argument(
@@ -69,9 +78,13 @@ Examples:
         input_file = Path(args.excel_files[0])
         output_file = Path(args.output)
 
-        FormatConverter.convert(input_file, output_file)
+        converter = FormatConverter()
+        converter.convert(input_file, output_file)
+
         print(f"Converted {input_file} -> {output_file}")
 
+        # Ohne return geht der Code nach convert() weiter
+        # und landet wieder in der Excel-Verarbeitung
         return
 
     # Determine if batch or single file mode
