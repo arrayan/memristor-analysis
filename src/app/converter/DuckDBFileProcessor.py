@@ -3,13 +3,13 @@ from pathlib import Path
 from .models import ProcessingResult
 import time
 
-class DuckDBFileProcessor:
 
+class DuckDBFileProcessor:
     def process(self, file_path):
 
         file_id = Path(file_path).stem
 
-        result = ProcessingResult(file_id = file_id)
+        result = ProcessingResult(file_id=file_id)
 
         start = time.time()
 
@@ -32,4 +32,3 @@ class DuckDBFileProcessor:
         result.elapsed = end - start
 
         return result
-

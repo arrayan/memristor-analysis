@@ -4,8 +4,7 @@ import duckdb
 
 
 class FormatConverter:
-
-    """ ways to convert --parquet or --duck db files to .csv .txt or excel """
+    """ways to convert --parquet or --duck db files to .csv .txt or excel"""
 
     def convert(self, input_path, output_path):
 
@@ -16,13 +15,11 @@ class FormatConverter:
 
         # -------- parquet --------
         if suffix == ".parquet":
-
             data_frame = pl.read_parquet(input_path)
             self._write(data_frame, output_path)
 
         # -------- duckdb --------
         elif suffix == ".duckdb":
-
             connection = duckdb.connect(str(input_path))
             tables = connection.execute("show tables").fetchall()
 

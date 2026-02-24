@@ -58,7 +58,9 @@ Examples:
         "--parquet-dir", default="parquet_data", help="Directory for Parquet output"
     )
     parser.add_argument(
-        "--convert", action="store_true", help="Convert parquet/duckdb to csv/txt/xlsx (independent mode)",
+        "--convert",
+        action="store_true",
+        help="Convert parquet/duckdb to csv/txt/xlsx (independent mode)",
     )
 
     args = parser.parse_args()
