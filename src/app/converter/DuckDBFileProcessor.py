@@ -1,5 +1,4 @@
 import duckdb
-import polars as pl
 from pathlib import Path
 from .models import ProcessingResult
 import time
