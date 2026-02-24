@@ -1,6 +1,5 @@
 from pathlib import Path
 import polars as pl
-import duckdb
 from .duckdb_file_processor import DuckDBFileProcessor
 
 class FormatConverter:
