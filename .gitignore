@@ -17,3 +17,6 @@ output/
 *.html
 testing_recources/
 output.duckdb
+.idea/
+*.duckdb
+out.csv
