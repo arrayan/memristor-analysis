@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 import argparse
 
-from converter import convert_single, batch_convert, export_to_parquet
+from app.converter import convert_single, batch_convert, export_to_parquet
+from app.converter.formatConverter import FormatConverter
+from pathlib import Path
 
 
 def main():
@@ -55,8 +57,20 @@ Examples:
     parser.add_argument(
         "--parquet-dir", default="parquet_data", help="Directory for Parquet output"
     )
+    parser.add_argument(
+        "--convert", action="store_true", help="Convert parquet/duckdb to csv/txt/xlsx (independent mode)",
+    )
 
     args = parser.parse_args()
+
+    if args.convert:
+        input_file = Path(args.excel_files[0])
+        output_file = Path(args.output)
+
+        FormatConverter.convert(input_file, output_file)
+        print(f"Converted {input_file} -> {output_file}")
+
+        return
 
     # Determine if batch or single file mode
     if args.batch or len(args.excel_files) > 1:
