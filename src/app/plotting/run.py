@@ -15,6 +15,12 @@ def _write(fig, out_path) -> None:
     print("Wrote:", out_path)
 
 
+# generating a JSON for Export
+def _write_json(fig, out_path) -> None:
+    out_path.write_text(fig.to_json(), encoding="utf-8")
+    print("Wrote:", out_path)
+
+
 def main() -> None:
     cfg = load_config()
     data = load_all(cfg)
@@ -29,8 +35,9 @@ def main() -> None:
         char_figs = build_characteristic_figs(data.raw_characteristic, data.sets)
         for fig in char_figs:
             pid = fig.layout.meta.get("param_id")
-            # Save as AI.html and NORM_COND.html
+            # Save as AI.html and NORM_COND.html as well as JSON for export
             _write(fig, char_dir / f"{pid}.html")
+            _write_json(fig, char_dir / f"{pid}.json")
 
     write_characteristic_figs()
 
@@ -46,6 +53,7 @@ def main() -> None:
             pid = fig.layout.meta.get("param_id")
             # Using your existing _write function
             _write(fig, cdf_dir / f"{pid}.html")
+            _write_json(fig, cdf_dir / f"{pid}.json")
 
     write_cdf_figs()
 
@@ -60,6 +68,7 @@ def main() -> None:
         for fig in figs:
             pid = fig.layout.meta.get("param_id")
             _write(fig, boxplot_dir / f"{pid}.html")
+            _write_json(fig, boxplot_dir / f"{pid}.json")
 
     write_boxplot_figs()
 
@@ -74,6 +83,7 @@ def main() -> None:
         for fig in end_figs:
             pid = fig.layout.meta.get("param_id")
             _write(fig, end_dir / f"{pid}.html")
+            _write_json(fig, end_dir / f"{pid}.json")
 
     write_endurance_figs()
 
@@ -88,6 +98,7 @@ def main() -> None:
         for fig in correlation_figs:
             pid = fig.layout.meta.get("param_id")
             _write(fig, char_dir / f"{pid}.html")
+            _write_json(fig, char_dir / f"{pid}.json")
 
     write_correlation_scatter_figs()
 

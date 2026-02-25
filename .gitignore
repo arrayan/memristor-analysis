@@ -16,4 +16,10 @@ __pycache__/
 output/
 *.html
 testing_recources/
-output.duckdb
+*.duckdb
+src/app/temp/
+*.png 
+*.jpeg
+*.pdf
+*.mmd
+

@@ -11,12 +11,12 @@ class MenuAction(Enum):
     EXPORT_ALL = ("All", "Ctrl+Shift+E", False)
     EXPORT_ALL_PNG = ("PNG", None, False)
     EXPORT_ALL_JPEG = ("JPEG", None, False)
-    EXPORT_ALL_APS = ("APS", None, False)
+    EXPORT_ALL_EPS = ("EPS", None, False)
 
     EXPORT_CURRENT = ("Current", "Ctrl+E", False)
     EXPORT_CURRENT_PNG = ("PNG", None, False)
     EXPORT_CURRENT_JPEG = ("JPEG", None, False)
-    EXPORT_CURRENT_APS = ("APS", None, False)
+    EXPORT_CURRENT_EPS = ("EPS", None, False)
 
     # EXIT
     EXIT = ("Exit", "Ctrl+Q", False)
