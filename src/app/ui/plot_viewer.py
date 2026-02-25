@@ -70,8 +70,8 @@ class PlotViewer(QWidget):
             return False
 
         fig = pio.from_json(json_path.read_text(encoding="utf-8"))
-        
-            # EPS special handling
+
+        # EPS special handling
         if fmt == "eps":
             # Fix unsupported fonts for ReportLab
             fig.update_layout(font=dict(family="Helvetica"))
@@ -86,7 +86,7 @@ class PlotViewer(QWidget):
             os.remove(svg_path)
 
             return True
-        
-         # Normal formats (PNG/SVG/PDF)        
+
+        # Normal formats (PNG/SVG/PDF)
         fig.write_image(out_path, format=fmt)
         return True

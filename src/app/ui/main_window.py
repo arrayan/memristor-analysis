@@ -64,8 +64,8 @@ class MainWindow(qt.QMainWindow):
         )
         menu_actions[MenuAction.EXPORT_CURRENT_PDF].triggered.connect(
             lambda checked=False: self.export_current("pdf")
-        ) 
-        
+        )
+
         # Export menu for all
 
         menu_actions[MenuAction.EXPORT_ALL_PNG].triggered.connect(
