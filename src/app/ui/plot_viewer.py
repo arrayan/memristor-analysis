@@ -4,6 +4,9 @@ from PySide6.QtCore import QUrl
 from pathlib import Path
 import plotly.io as pio
 import os
+from svglib.svglib import svg2rlg
+from reportlab.graphics import renderPS
+import tempfile
 
 
 class PlotViewer(QWidget):
@@ -67,5 +70,23 @@ class PlotViewer(QWidget):
             return False
 
         fig = pio.from_json(json_path.read_text(encoding="utf-8"))
+        
+            # EPS special handling
+        if fmt == "eps":
+            # Fix unsupported fonts for ReportLab
+            fig.update_layout(font=dict(family="Helvetica"))
+            with tempfile.NamedTemporaryFile(suffix=".svg", delete=False) as tmp:
+                svg_path = tmp.name
+
+            fig.write_image(svg_path, format="svg")
+
+            drawing = svg2rlg(svg_path)
+            renderPS.drawToFile(drawing, out_path)
+
+            os.remove(svg_path)
+
+            return True
+        
+         # Normal formats (PNG/SVG/PDF)        
         fig.write_image(out_path, format=fmt)
         return True
