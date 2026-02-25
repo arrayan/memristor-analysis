@@ -47,7 +47,7 @@ class MainWindow(qt.QMainWindow):
             lambda: self.apply_to_active(lambda v: v.set_scale("log"))
         )
 
-        # Export menu for current and all
+        # Export menu for current
         menu_actions[MenuAction.EXPORT_CURRENT_PNG].triggered.connect(
             lambda checked=False: self.export_current("png")
         )
@@ -59,6 +59,14 @@ class MainWindow(qt.QMainWindow):
         menu_actions[MenuAction.EXPORT_CURRENT_EPS].triggered.connect(
             lambda checked=False: self.export_current("eps")
         )
+        menu_actions[MenuAction.EXPORT_CURRENT_SVG].triggered.connect(
+            lambda checked=False: self.export_current("SVG")
+        )
+        menu_actions[MenuAction.EXPORT_CURRENT_PDF].triggered.connect(
+            lambda checked=False: self.export_current("pdf")
+        ) 
+        
+        # Export menu for all
 
         menu_actions[MenuAction.EXPORT_ALL_PNG].triggered.connect(
             lambda checked=False: self.export_all("png")
@@ -70,6 +78,12 @@ class MainWindow(qt.QMainWindow):
 
         menu_actions[MenuAction.EXPORT_ALL_EPS].triggered.connect(
             lambda checked=False: self.export_all("eps")
+        )
+        menu_actions[MenuAction.EXPORT_ALL_SVG].triggered.connect(
+            lambda checked=False: self.export_all("svg")
+        )
+        menu_actions[MenuAction.EXPORT_ALL_PDF].triggered.connect(
+            lambda checked=False: self.export_all("pdf")
         )
 
     def export_current(self, fmt: str):
