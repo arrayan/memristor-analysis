@@ -47,6 +47,109 @@ class MainWindow(qt.QMainWindow):
             lambda: self.apply_to_active(lambda v: v.set_scale("log"))
         )
 
+        # Export menu for current and all
+        menu_actions[MenuAction.EXPORT_CURRENT_PNG].triggered.connect(
+            lambda checked=False: self.export_current("png")
+        )
+
+        menu_actions[MenuAction.EXPORT_CURRENT_JPEG].triggered.connect(
+            lambda checked=False: self.export_current("jpeg")
+        )
+
+        menu_actions[MenuAction.EXPORT_CURRENT_EPS].triggered.connect(
+            lambda checked=False: self.export_current("eps")
+        )
+
+        menu_actions[MenuAction.EXPORT_ALL_PNG].triggered.connect(
+            lambda checked=False: self.export_all("png")
+        )
+
+        menu_actions[MenuAction.EXPORT_ALL_JPEG].triggered.connect(
+            lambda checked=False: self.export_all("jpeg")
+        )
+
+        menu_actions[MenuAction.EXPORT_ALL_EPS].triggered.connect(
+            lambda checked=False: self.export_all("eps")
+        )
+
+    def export_current(self, fmt: str):
+
+        viewer = self.nav_bar.get_current_viewer()
+
+        if viewer is None:
+            qt.QMessageBox.warning(self, "Export", "No plot selected")
+            return
+
+        file_path, _ = qt.QFileDialog.getSaveFileName(
+            self,
+            "Export Plot",
+            f"plot.{fmt}",
+            f"{fmt.upper()} Files (*.{fmt})",
+        )
+
+        if not file_path:
+            return
+
+        ok = viewer.export_image(file_path, fmt)
+
+        if not ok:
+            qt.QMessageBox.warning(
+                self,
+                "Export",
+                "Export failed: missing .json next to the loaded .html.",
+            )
+
+    def export_all(self, fmt: str):
+
+        folder = qt.QFileDialog.getExistingDirectory(self, "Select Export Folder")
+
+        if not folder:
+            return
+
+        viewers = self.nav_bar.get_all_viewers()
+
+        if not viewers:
+            qt.QMessageBox.warning(self, "Export", "No plots loaded")
+            return
+
+        for i, viewer in enumerate(viewers):
+            if getattr(viewer, "html_path", None):
+                filename = Path(viewer.html_path).stem
+            else:
+                filename = f"plot_{i}"
+
+            path = Path(folder) / f"{filename}.{fmt}"
+
+            viewer.export_image(str(path), fmt)
+
+    # Helper to get the figure
+    def _get_figure(self, viewer):
+
+        if hasattr(viewer, "get_figure"):
+            return viewer.get_figure()
+
+        if hasattr(viewer, "figure"):
+            return viewer.figure
+
+        return None
+
+    # Helper to save the figure
+    def _write_figure(self, fig, path):
+
+        path = str(path)
+
+        # Plotly
+        if hasattr(fig, "write_image"):
+            fig.write_image(path)
+            return
+
+        # Matplotlib
+        if hasattr(fig, "savefig"):
+            fig.savefig(path)
+            return
+
+        qt.QMessageBox.warning(self, "Export", "Unsupported figure type")
+
     def handle_import(self, mode: Mode):
         folder = qt.QFileDialog.getExistingDirectory(
             self, f"Select {mode.value} Folder"

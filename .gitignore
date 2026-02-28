@@ -25,3 +25,10 @@ memristor.duckdb
 output.*
 out.*
 parquet_data/
+*.duckdb
+src/app/temp/
+*.png 
+*.jpeg
+*.pdf
+*.mmd
+
