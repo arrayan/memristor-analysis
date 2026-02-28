@@ -74,8 +74,20 @@ Examples:
 
     args = parser.parse_args()
 
+    if args.convert and args.parquet:
+        parser.error("parquet cannot be used with convert")
+    if args.convert and args.batch:
+        parser.error("batch cannot be used with convert")
+    if args.convert and args.workers is not None:
+        parser.error("workers cannot be used with convert")
+    if args.convert and args.no_parallel:
+        parser.error("no-parallel cannot be used with convert")
+
     if args.convert:
         input_file = Path(args.excel_files[0])
+        if not input_file.exists():
+            parser.error(f"File not found: {input_file}")
+
         output_file = Path(args.output)
 
         converter = FormatConverter()
@@ -83,30 +95,27 @@ Examples:
 
         print(f"Converted {input_file} -> {output_file}")
 
-        # Ohne return geht der Code nach convert() weiter
-        # und landet wieder in der Excel-Verarbeitung
-        return
+    else:
+        # Determine if batch or single file mode
+        if args.batch or len(args.excel_files) > 1:
+            # Batch mode
+            if len(args.excel_files) == 1 and (
+                "*" in args.excel_files[0] or "?" in args.excel_files[0]
+            ):
+                input_pattern = args.excel_files[0]
+            else:
+                input_pattern = args.excel_files  # List of files
 
-    # Determine if batch or single file mode
-    if args.batch or len(args.excel_files) > 1:
-        # Batch mode
-        if len(args.excel_files) == 1 and (
-            "*" in args.excel_files[0] or "?" in args.excel_files[0]
-        ):
-            input_pattern = args.excel_files[0]
-        else:
-            input_pattern = args.excel_files  # List of files
-
-        db_path = batch_convert(
+            db_path = batch_convert(
             input_pattern,
             args.output,
             exclude_sheets=None,
-        )
-    else:
-        db_path = convert_single(args.excel_files[0], args.output)
+            )
+        else:
+            db_path = convert_single(args.excel_files[0], args.output)
 
-    if args.parquet:
-        export_to_parquet(db_path, args.parquet_dir)
+        if args.parquet:
+            export_to_parquet(db_path, args.parquet_dir)
 
 
 if __name__ == "__main__":
