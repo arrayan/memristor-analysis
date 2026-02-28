@@ -107,9 +107,9 @@ Examples:
                 input_pattern = args.excel_files  # List of files
 
             db_path = batch_convert(
-            input_pattern,
-            args.output,
-            exclude_sheets=None,
+                input_pattern,
+                args.output,
+                exclude_sheets=None,
             )
         else:
             db_path = convert_single(args.excel_files[0], args.output)
