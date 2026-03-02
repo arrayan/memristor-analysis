@@ -26,7 +26,7 @@ def build_endurance_figs(end_df: "pd.DataFrame", sets: list[str]) -> list[go.Fig
     cols = px.colors.qualitative.Plotly
     color_map = {s: cols[i % len(cols)] for i, s in enumerate(sets)}
 
-    tick_vals = [10.0 ** i for i in range(-15, 16)]
+    tick_vals = [10.0**i for i in range(-15, 16)]
     tick_text = [f"1e{i}" if i != 0 else "1" for i in range(-15, 16)]
 
     figures = []

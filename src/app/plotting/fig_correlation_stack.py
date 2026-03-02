@@ -6,9 +6,7 @@ import plotly.express as px
 
 
 def build_stack_level_correlation_figs(
-    scatter_df: "pd.DataFrame",
-    stack_id: str,
-    devices: list[str]
+    scatter_df: "pd.DataFrame", stack_id: str, devices: list[str]
 ) -> list[go.Figure]:
     """
     Stack-Level: Correlation scatter plots (one per pair).
@@ -48,11 +46,14 @@ def build_stack_level_correlation_figs(
             # find all sets for device
             device_pattern = f"_{device}_"
             device_sets = [
-                s for s in scatter_df["source_file"].unique()
+                s
+                for s in scatter_df["source_file"].unique()
                 if device_pattern in s or s.endswith(f"_{device}")
             ]
             if not device_sets:
-                device_sets = [s for s in scatter_df["source_file"].unique() if device in s]
+                device_sets = [
+                    s for s in scatter_df["source_file"].unique() if device in s
+                ]
 
             # aggregate
             df_device = scatter_df[scatter_df["source_file"].isin(device_sets)].copy()
@@ -78,11 +79,7 @@ def build_stack_level_correlation_figs(
                     x=df_plot[x_col],
                     y=df_plot[y_col],
                     mode="markers",
-                    marker=dict(
-                        color=device_color_map[device],
-                        size=7,
-                        opacity=0.7
-                    ),
+                    marker=dict(color=device_color_map[device], size=7, opacity=0.7),
                     name=device,
                     legendgroup=device,
                     hovertemplate=f"Device: {device}<br>{x_col}: %{{x}}<br>{y_col}: %{{y}}<extra></extra>",
@@ -127,11 +124,7 @@ def build_stack_level_correlation_figs(
             height=700,
             template="plotly_white",
             legend=dict(title="Devices (Click to toggle)"),
-            meta={
-                "param_id": param_id,
-                "level": "stack",
-                "stack_id": stack_id
-            },
+            meta={"param_id": param_id, "level": "stack", "stack_id": stack_id},
         )
         figures.append(fig)
 
