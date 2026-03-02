@@ -3,37 +3,18 @@ import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 import plotly.express as px
+from .fig_cdf import _cdf_xy
 
 
-def _cdf_xy(values: pd.Series, is_log: bool) -> tuple[np.ndarray, np.ndarray]:
+def build_stack_level_cdf_figs(
+        cdf_table: "pd.DataFrame",
+        stack_id: str,
+        devices: list[str]
+) -> list[go.Figure]:
     """
-    Return sorted x and cumulative probability in percent.
-    If is_log is True, applies absolute magnitude and filters out <= 0.
+    Stack-Level CDFs: Every device aggregates all his endurance sets.
     """
-    v = pd.to_numeric(values, errors="coerce").dropna()
-
-    if is_log:
-        # Log scale requirements: Absolute magnitude and > 0
-        v = v.abs()
-        v = v[v > 0]
-
-    v = v.to_numpy()
-
-    if v.size == 0:
-        return np.array([]), np.array([])
-
-    x = np.sort(v)
-    y = (np.arange(1, x.size + 1) / x.size) * 100.0
-    return x, y
-
-
-def build_cdf_figs(cdf_table: "pd.DataFrame", sets: list[str]) -> list[go.Figure]:
-    """
-    Creates a list of CDF Figure objects, one for each parameter.
-    Selectively applies Log or Linear scales based on the parameter type.
-    Forces at least two log magnitudes to be visible for log scales.
-    """
-    if cdf_table is None or cdf_table.empty or not sets:
+    if cdf_table is None or cdf_table.empty or not devices:
         return []
 
     param_map = {
@@ -45,11 +26,10 @@ def build_cdf_figs(cdf_table: "pd.DataFrame", sets: list[str]) -> list[go.Figure
         "V_forming": {"pretty": "V_forming (V)", "scale": "linear"},
     }
 
-    cols = px.colors.sample_colorscale("Viridis", max(len(sets), 2))
-    color_map = {s: cols[i] for i, s in enumerate(sets)}
+    cols = px.colors.sample_colorscale("Viridis", max(len(devices), 2))
+    color_map = {d: cols[i] for i, d in enumerate(devices)}
 
-    # Generate major log ticks only (10^n)
-    tick_vals = [10.0**i for i in range(-15, 16)]
+    tick_vals = [10.0 ** i for i in range(-15, 16)]
     tick_text = [f"1e{i}" if i != 0 else "1" for i in range(-15, 16)]
 
     figures = []
@@ -61,13 +41,22 @@ def build_cdf_figs(cdf_table: "pd.DataFrame", sets: list[str]) -> list[go.Figure
         fig = go.Figure()
         is_log = info["scale"] == "log"
         has_any_data = False
-
-        # Accumulate all x values for this plot to calculate range later
         all_x_vals = []
 
-        for s in sets:
-            df_s = cdf_table[cdf_table["source_file"] == s]
-            x, y = _cdf_xy(df_s[param], is_log=is_log)
+        for device in devices:
+            # find all sets
+            device_pattern = f"_{device}_"
+            device_sets = [
+                s for s in cdf_table["source_file"].unique()
+                if device_pattern in s or s.endswith(f"_{device}")
+            ]
+
+            if not device_sets:
+                device_sets = [s for s in cdf_table["source_file"].unique() if device in s]
+
+            # aggregate
+            df_device = cdf_table[cdf_table["source_file"].isin(device_sets)]
+            x, y = _cdf_xy(df_device[param], is_log=is_log)
 
             if x.size > 0:
                 has_any_data = True
@@ -77,14 +66,13 @@ def build_cdf_figs(cdf_table: "pd.DataFrame", sets: list[str]) -> list[go.Figure
                         x=x,
                         y=y,
                         mode="lines+markers",
-                        name=s,
+                        name=device,
                         marker=dict(size=4),
-                        line=dict(color=color_map.get(s), width=2),
+                        line=dict(color=color_map.get(device), width=2),
                         hovertemplate="%{x}<br>%{y:.1f}%<extra></extra>",
                     )
                 )
 
-        # X-Axis Configuration
         if is_log:
             xaxis_kwargs = dict(
                 type="log",
@@ -96,27 +84,22 @@ def build_cdf_figs(cdf_table: "pd.DataFrame", sets: list[str]) -> list[go.Figure
                 showgrid=True,
                 gridcolor="#E5E5E5",
                 zeroline=False,
-                minor=dict(showgrid=False),  # Hide the default .5 lines
+                minor=dict(showgrid=False),
             )
 
-            # FORCE RANGE LOGIC: Ensure at least two magnitudes are visible
             if all_x_vals:
                 lmin = np.log10(min(all_x_vals))
                 lmax = np.log10(max(all_x_vals))
 
-                # If span is less than 1.0 (one decade), force it to ~1.1
                 if (lmax - lmin) < 1.0:
                     mid = (lmin + lmax) / 2
                     xaxis_kwargs["range"] = [mid - 0.55, mid + 0.55]
                 else:
-                    # Normal padding in log space
                     pad = (lmax - lmin) * 0.05
                     xaxis_kwargs["range"] = [lmin - pad, lmax + pad]
 
             fig.update_xaxes(**xaxis_kwargs)
-
         else:
-            # Linear Scale Configuration
             fig.update_xaxes(
                 type="linear",
                 title_text=info["pretty"],
@@ -127,7 +110,6 @@ def build_cdf_figs(cdf_table: "pd.DataFrame", sets: list[str]) -> list[go.Figure
                 autorange=True,
             )
 
-        # Y-Axis Configuration
         fig.update_yaxes(
             title_text="Probability (%)",
             range=[-2, 102],
@@ -136,12 +118,12 @@ def build_cdf_figs(cdf_table: "pd.DataFrame", sets: list[str]) -> list[go.Figure
         )
 
         fig.update_layout(
-            title=f"CDF – {info['pretty']} ({info['scale'].capitalize()} Scale)",
+            title=f"Stack {stack_id} – CDF {info['pretty']} ({info['scale'].capitalize()} Scale) | Device-Level",
             width=900,
             height=600,
             template="plotly_white",
             showlegend=True,
-            meta={"param_id": param},
+            meta={"param_id": param, "level": "stack", "stack_id": stack_id},
         )
 
         if not has_any_data:
