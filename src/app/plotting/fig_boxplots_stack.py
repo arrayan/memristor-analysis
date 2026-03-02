@@ -5,19 +5,19 @@ import plotly.graph_objects as go
 import plotly.express as px
 
 
-def build_boxplots_figs(box_table: "pd.DataFrame", sets: list[str]) -> list[go.Figure]:
+def build_stack_level_boxplots(
+        box_table: pd.DataFrame,
+        stack_id: str,
+        devices: list[str],
+        param_map: dict | None = None,
+) -> list[go.Figure]:
     """
-    Creates a list of plotly Figure objects, one for each parameter.
-
-    Features:
-    - R_LRS, R_HRS, and I_reset_max use Log Scale.
-    - Voltages (VSET, V_reset, V_forming) use Linear Scale.
-    - Log scales are forced to display at least one major magnitude grid line.
+    Stack-Level Boxplots: every device
     """
-    if box_table is None or box_table.empty or not sets:
+    if box_table is None or box_table.empty or not devices:
         return []
 
-    # 1. Define Scale Requirements
+    # param map:
     param_map = {
         "VSET": {"pretty": "V_set (V)", "scale": "linear"},
         "V_reset": {"pretty": "V_reset (V)", "scale": "linear"},
@@ -27,11 +27,11 @@ def build_boxplots_figs(box_table: "pd.DataFrame", sets: list[str]) -> list[go.F
         "V_forming": {"pretty": "V_forming (V)", "scale": "linear"},
     }
 
-    cols = px.colors.sample_colorscale("Viridis", max(len(sets), 2))
-    color_map = {s: cols[i] for i, s in enumerate(sets)}
+    cols = px.colors.sample_colorscale("Viridis", max(len(devices), 2))
+    color_map = {d: cols[i] for i, d in enumerate(devices)}
 
-    # Major Magnitude Ticks only (10^n)
-    tick_vals = [10.0**i for i in range(-15, 16)]
+    # Log-Scale
+    tick_vals = [10.0 ** i for i in range(-15, 16)]
     tick_text = [f"1e{i}" if i != 0 else "1" for i in range(-15, 16)]
 
     figures = []
@@ -43,14 +43,25 @@ def build_boxplots_figs(box_table: "pd.DataFrame", sets: list[str]) -> list[go.F
         fig = go.Figure()
         is_log = info["scale"] == "log"
         has_any_data = False
-        all_vals_for_param = []  # Used to calculate forced log range
+        all_vals_for_param = []
 
-        for s in sets:
-            df_s = box_table[box_table["source_file"] == s]
-            vals = pd.to_numeric(df_s[param], errors="coerce").dropna()
+        for device in devices:
+            # find all sets
+            device_pattern = f"_{device}_"
+            device_sets = [
+                s for s in box_table["source_file"].unique()
+                if device_pattern in s or s.endswith(f"_{device}")
+            ]
+
+            # fallback: prefix matching
+            if not device_sets:
+                device_sets = [s for s in box_table["source_file"].unique() if device in s]
+
+            # aggregation
+            df_device = box_table[box_table["source_file"].isin(device_sets)]
+            vals = pd.to_numeric(df_device[param], errors="coerce").dropna()
 
             if is_log:
-                # Log cleaning: Absolute magnitude and remove non-positive
                 vals = vals.abs()
                 vals = vals[vals > 0]
 
@@ -61,17 +72,16 @@ def build_boxplots_figs(box_table: "pd.DataFrame", sets: list[str]) -> list[go.F
             fig.add_trace(
                 go.Box(
                     y=vals,
-                    name=s,
-                    marker_color=color_map.get(s),
-                    boxmean=False,
+                    name=device,
+                    marker_color=color_map.get(device),
                     line=dict(width=2),
-                    fillcolor=color_map.get(s),
+                    fillcolor=color_map.get(device),
                     opacity=0.7,
                     boxpoints=False,
+                    boxmean=False,
                 )
             )
 
-        # --- Y-Axis Configuration ---
         if is_log:
             yaxis_config = dict(
                 type="log",
@@ -82,17 +92,14 @@ def build_boxplots_figs(box_table: "pd.DataFrame", sets: list[str]) -> list[go.F
                 exponentformat="power",
                 showgrid=True,
                 gridcolor="#E5E5E5",
-                minor=dict(showgrid=False),  # Keep it clean without .5 lines
+                minor=dict(showgrid=False),
                 zeroline=False,
             )
 
-            # FORCE RANGE LOGIC: Ensure at least one magnitude is visible
             if all_vals_for_param:
                 lmin = np.log10(min(all_vals_for_param))
                 lmax = np.log10(max(all_vals_for_param))
 
-                # If the span is tight, expand it to 1.1 decades
-                # to guarantee a major grid line (1eX) appears
                 if (lmax - lmin) < 1.0:
                     mid = (lmin + lmax) / 2
                     yaxis_config["range"] = [mid - 0.55, mid + 0.55]
@@ -101,7 +108,6 @@ def build_boxplots_figs(box_table: "pd.DataFrame", sets: list[str]) -> list[go.F
 
             fig.update_yaxes(**yaxis_config)
         else:
-            # Linear Axis Configuration
             fig.update_yaxes(
                 type="linear",
                 title_text=info["pretty"],
@@ -112,16 +118,20 @@ def build_boxplots_figs(box_table: "pd.DataFrame", sets: list[str]) -> list[go.F
                 zerolinecolor="gray",
             )
 
-        fig.update_xaxes(title_text="Set / File", showgrid=True, gridcolor="#E5E5E5")
+        fig.update_xaxes(
+            title_text="Device",
+            showgrid=True,
+            gridcolor="#E5E5E5"
+        )
 
         fig.update_layout(
-            title=f"Boxplot – {info['pretty']} ({info['scale'].capitalize()} Scale)",
+            title=f"Stack {stack_id} – {info['pretty']} ({info['scale'].capitalize()} Scale) | Device-Level Aggregation",
             width=900,
             height=600,
             template="plotly_white",
             showlegend=True,
             boxmode="group",
-            meta={"param_id": param},
+            meta={"param_id": param, "level": "stack", "stack_id": stack_id},
         )
 
         if not has_any_data:
