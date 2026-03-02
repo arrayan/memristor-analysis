@@ -64,11 +64,10 @@ def main() -> None:
 
     # CDF stack level:
     def write_stack_level_cdf_figs():
-        stack_id = getattr(data, 'stack_id', 'H25098')
-        devices = sorted(set(
-            s.split("_")[1] for s in data.sets
-            if len(s.split("_")) > 1
-        ))
+        stack_id = getattr(data, "stack_id", "H25098")
+        devices = sorted(
+            set(s.split("_")[1] for s in data.sets if len(s.split("_")) > 1)
+        )
 
         stack_cdf_dir = cfg.output_dir / "cdfs_stack_level"
         stack_cdf_dir.mkdir(parents=True, exist_ok=True)
@@ -85,7 +84,6 @@ def main() -> None:
             _write_json(fig, stack_cdf_dir / f"{pid}.json")
 
     write_stack_level_cdf_figs()
-
 
     # Boxplots
     def write_boxplot_figs():
@@ -104,11 +102,10 @@ def main() -> None:
 
     # stack level boxplot
     def write_stack_level_boxplots():
-        stack_id = getattr(data, 'stack_id', 'H25098')
-        devices = sorted(set(
-             s.split("_")[1] for s in data.sets
-             if len(s.split("_")) > 1
-        ))
+        stack_id = getattr(data, "stack_id", "H25098")
+        devices = sorted(
+            set(s.split("_")[1] for s in data.sets if len(s.split("_")) > 1)
+        )
 
         stack_dir = cfg.output_dir / "boxplots_stack_level"
         stack_dir.mkdir(parents=True, exist_ok=True)
@@ -125,7 +122,6 @@ def main() -> None:
             _write_json(fig, stack_dir / f"{pid}.json")
 
     write_stack_level_boxplots()
-
 
     #  Endurance performance vs cycle
     def write_endurance_figs():
@@ -155,11 +151,10 @@ def main() -> None:
             _write_json(fig, char_dir / f"{pid}.json")
 
         # Stack-Level
-        stack_id = getattr(data, 'stack_id', 'H25098')
-        devices = sorted(set(
-            s.split("_")[1] for s in data.sets
-            if len(s.split("_")) > 1
-        ))
+        stack_id = getattr(data, "stack_id", "H25098")
+        devices = sorted(
+            set(s.split("_")[1] for s in data.sets if len(s.split("_")) > 1)
+        )
 
         stack_corr_dir = cfg.output_dir / "correlation_plots_stack_level"
         stack_corr_dir.mkdir(parents=True, exist_ok=True)
@@ -179,10 +174,9 @@ def main() -> None:
 
     # correlation matrix
     def write_correlation_matrix_figs():
-        devices = sorted(set(
-            s.split("_")[1] for s in data.sets
-            if len(s.split("_")) > 1
-        ))
+        devices = sorted(
+            set(s.split("_")[1] for s in data.sets if len(s.split("_")) > 1)
+        )
 
         # Device-Level
         matrix_dir = cfg.output_dir / "correlation_matrices"
@@ -200,7 +194,7 @@ def main() -> None:
             _write_json(fig, matrix_dir / f"{pid}.json")
 
         # Stack-Level
-        stack_id = getattr(data, 'stack_id', 'H25098')
+        stack_id = getattr(data, "stack_id", "H25098")
 
         stack_matrix_dir = cfg.output_dir / "correlation_matrices_stack_level"
         stack_matrix_dir.mkdir(parents=True, exist_ok=True)

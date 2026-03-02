@@ -19,7 +19,9 @@ def _prepare_data(df: pd.DataFrame, params: list[str]) -> pd.DataFrame:
     return df_numeric
 
 
-def _create_heatmap(corr_matrix: pd.DataFrame, param_labels: dict, params: list[str]) -> go.Heatmap:
+def _create_heatmap(
+    corr_matrix: pd.DataFrame, param_labels: dict, params: list[str]
+) -> go.Heatmap:
     """Helper: Erstellt Heatmap Trace."""
     labels = [param_labels.get(p, p) for p in params]
 
@@ -38,7 +40,7 @@ def _create_heatmap(corr_matrix: pd.DataFrame, param_labels: dict, params: list[
 
 
 def build_correlation_matrix_figs(
-        scatter_df: "pd.DataFrame", sets: list[str], devices: list[str] | None = None
+    scatter_df: "pd.DataFrame", sets: list[str], devices: list[str] | None = None
 ) -> list[go.Figure]:
     """
     Device-Level: Correlation matrix heatmaps.
@@ -76,7 +78,9 @@ def build_correlation_matrix_figs(
         if corr_matrix.empty or corr_matrix.isna().all().all():
             continue
 
-        fig = go.Figure(data=_create_heatmap(corr_matrix, param_labels, available_params))
+        fig = go.Figure(
+            data=_create_heatmap(corr_matrix, param_labels, available_params)
+        )
 
         fig.update_layout(
             title=f"Correlation Matrix – {s}",
@@ -95,11 +99,14 @@ def build_correlation_matrix_figs(
             # find all sets
             device_pattern = f"_{device}_"
             device_sets = [
-                s for s in scatter_df["source_file"].unique()
+                s
+                for s in scatter_df["source_file"].unique()
                 if device_pattern in s or s.endswith(f"_{device}")
             ]
             if not device_sets:
-                device_sets = [s for s in scatter_df["source_file"].unique() if device in s]
+                device_sets = [
+                    s for s in scatter_df["source_file"].unique() if device in s
+                ]
 
             if not device_sets:
                 continue
@@ -115,7 +122,9 @@ def build_correlation_matrix_figs(
             if corr_matrix.empty or corr_matrix.isna().all().all():
                 continue
 
-            fig = go.Figure(data=_create_heatmap(corr_matrix, param_labels, available_params))
+            fig = go.Figure(
+                data=_create_heatmap(corr_matrix, param_labels, available_params)
+            )
 
             fig.update_layout(
                 title=f"Correlation Matrix – Device {device} (all sets aggregated)",

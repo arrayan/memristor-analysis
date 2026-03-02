@@ -6,7 +6,7 @@ import plotly.express as px
 
 
 def build_characteristic_figs(
-        raw_by_set: dict[str, "pd.DataFrame"], sets: list[str]
+    raw_by_set: dict[str, "pd.DataFrame"], sets: list[str]
 ) -> list[go.Figure]:
     """
     Creates three figures:
@@ -20,7 +20,7 @@ def build_characteristic_figs(
     base_cols = px.colors.qualitative.Plotly
     set_color_map = {s: base_cols[i % len(base_cols)] for i, s in enumerate(sets)}
 
-    tick_vals = [10.0 ** i for i in range(-15, 1)]
+    tick_vals = [10.0**i for i in range(-15, 1)]
     tick_text = [f"1e{i}" if i != 0 else "1" for i in range(-15, 1)]
 
     figures = []

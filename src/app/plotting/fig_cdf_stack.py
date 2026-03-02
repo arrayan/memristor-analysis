@@ -7,9 +7,7 @@ from .fig_cdf import _cdf_xy
 
 
 def build_stack_level_cdf_figs(
-        cdf_table: "pd.DataFrame",
-        stack_id: str,
-        devices: list[str]
+    cdf_table: "pd.DataFrame", stack_id: str, devices: list[str]
 ) -> list[go.Figure]:
     """
     Stack-Level CDFs: Every device aggregates all his endurance sets.
@@ -29,7 +27,7 @@ def build_stack_level_cdf_figs(
     cols = px.colors.sample_colorscale("Viridis", max(len(devices), 2))
     color_map = {d: cols[i] for i, d in enumerate(devices)}
 
-    tick_vals = [10.0 ** i for i in range(-15, 16)]
+    tick_vals = [10.0**i for i in range(-15, 16)]
     tick_text = [f"1e{i}" if i != 0 else "1" for i in range(-15, 16)]
 
     figures = []
@@ -47,12 +45,15 @@ def build_stack_level_cdf_figs(
             # find all sets
             device_pattern = f"_{device}_"
             device_sets = [
-                s for s in cdf_table["source_file"].unique()
+                s
+                for s in cdf_table["source_file"].unique()
                 if device_pattern in s or s.endswith(f"_{device}")
             ]
 
             if not device_sets:
-                device_sets = [s for s in cdf_table["source_file"].unique() if device in s]
+                device_sets = [
+                    s for s in cdf_table["source_file"].unique() if device in s
+                ]
 
             # aggregate
             df_device = cdf_table[cdf_table["source_file"].isin(device_sets)]

@@ -6,10 +6,10 @@ import plotly.express as px
 
 
 def build_stack_level_boxplots(
-        box_table: pd.DataFrame,
-        stack_id: str,
-        devices: list[str],
-        param_map: dict | None = None,
+    box_table: pd.DataFrame,
+    stack_id: str,
+    devices: list[str],
+    param_map: dict | None = None,
 ) -> list[go.Figure]:
     """
     Stack-Level Boxplots: every device
@@ -31,7 +31,7 @@ def build_stack_level_boxplots(
     color_map = {d: cols[i] for i, d in enumerate(devices)}
 
     # Log-Scale
-    tick_vals = [10.0 ** i for i in range(-15, 16)]
+    tick_vals = [10.0**i for i in range(-15, 16)]
     tick_text = [f"1e{i}" if i != 0 else "1" for i in range(-15, 16)]
 
     figures = []
@@ -49,13 +49,16 @@ def build_stack_level_boxplots(
             # find all sets
             device_pattern = f"_{device}_"
             device_sets = [
-                s for s in box_table["source_file"].unique()
+                s
+                for s in box_table["source_file"].unique()
                 if device_pattern in s or s.endswith(f"_{device}")
             ]
 
             # fallback: prefix matching
             if not device_sets:
-                device_sets = [s for s in box_table["source_file"].unique() if device in s]
+                device_sets = [
+                    s for s in box_table["source_file"].unique() if device in s
+                ]
 
             # aggregation
             df_device = box_table[box_table["source_file"].isin(device_sets)]
@@ -118,11 +121,7 @@ def build_stack_level_boxplots(
                 zerolinecolor="gray",
             )
 
-        fig.update_xaxes(
-            title_text="Device",
-            showgrid=True,
-            gridcolor="#E5E5E5"
-        )
+        fig.update_xaxes(title_text="Device", showgrid=True, gridcolor="#E5E5E5")
 
         fig.update_layout(
             title=f"Stack {stack_id} – {info['pretty']} ({info['scale'].capitalize()} Scale) | Device-Level Aggregation",

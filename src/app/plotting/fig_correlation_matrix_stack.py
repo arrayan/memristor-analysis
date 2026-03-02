@@ -3,10 +3,9 @@ import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
 
+
 def build_stack_level_correlation_matrix_figs(
-        scatter_df: "pd.DataFrame",
-        stack_id: str,
-        devices: list[str]
+    scatter_df: "pd.DataFrame", stack_id: str, devices: list[str]
 ) -> list[go.Figure]:
     """
     Stack-Level: Correlation matrix heatmap (one per device).
@@ -36,7 +35,8 @@ def build_stack_level_correlation_matrix_figs(
         # find all sets for device
         device_pattern = f"_{device}_"
         device_sets = [
-            s for s in scatter_df["source_file"].unique()
+            s
+            for s in scatter_df["source_file"].unique()
             if device_pattern in s or s.endswith(f"_{device}")
         ]
         if not device_sets:
@@ -63,18 +63,20 @@ def build_stack_level_correlation_matrix_figs(
             continue
 
         # Heatmap
-        fig = go.Figure(data=go.Heatmap(
-            z=corr_matrix.values,
-            x=[param_labels.get(p, p) for p in available_params],
-            y=[param_labels.get(p, p) for p in available_params],
-            zmin=-1,
-            zmax=1,
-            colorscale="RdBu_r",
-            text=np.round(corr_matrix.values, 2),
-            texttemplate="%{text:.2f}",
-            textfont={"size": 10},
-            hovertemplate="%{x} vs %{y}<br>Corr: %{z:.3f}<extra></extra>",
-        ))
+        fig = go.Figure(
+            data=go.Heatmap(
+                z=corr_matrix.values,
+                x=[param_labels.get(p, p) for p in available_params],
+                y=[param_labels.get(p, p) for p in available_params],
+                zmin=-1,
+                zmax=1,
+                colorscale="RdBu_r",
+                text=np.round(corr_matrix.values, 2),
+                texttemplate="%{text:.2f}",
+                textfont={"size": 10},
+                hovertemplate="%{x} vs %{y}<br>Corr: %{z:.3f}<extra></extra>",
+            )
+        )
 
         fig.update_layout(
             title=f"Stack {stack_id} – Correlation Matrix – {device}",
@@ -94,9 +96,11 @@ def build_stack_level_correlation_matrix_figs(
         figures.append(fig)
 
     # Zusätzlich: Eine Matrix für den gesamten Stack (alle Devices aggregiert)
-    df_all = scatter_df[scatter_df["source_file"].isin(
-        [s for d in devices for s in scatter_df["source_file"].unique() if d in s]
-    )].copy()
+    df_all = scatter_df[
+        scatter_df["source_file"].isin(
+            [s for d in devices for s in scatter_df["source_file"].unique() if d in s]
+        )
+    ].copy()
 
     if not df_all.empty:
         df_numeric_all = df_all[available_params].apply(pd.to_numeric, errors="coerce")
@@ -108,18 +112,20 @@ def build_stack_level_correlation_matrix_figs(
         corr_matrix_all = df_numeric_all.corr()
 
         if not corr_matrix_all.empty:
-            fig_all = go.Figure(data=go.Heatmap(
-                z=corr_matrix_all.values,
-                x=[param_labels.get(p, p) for p in available_params],
-                y=[param_labels.get(p, p) for p in available_params],
-                zmin=-1,
-                zmax=1,
-                colorscale="RdBu_r",
-                text=np.round(corr_matrix_all.values, 2),
-                texttemplate="%{text:.2f}",
-                textfont={"size": 10},
-                hovertemplate="%{x} vs %{y}<br>Corr: %{z:.3f}<extra></extra>",
-            ))
+            fig_all = go.Figure(
+                data=go.Heatmap(
+                    z=corr_matrix_all.values,
+                    x=[param_labels.get(p, p) for p in available_params],
+                    y=[param_labels.get(p, p) for p in available_params],
+                    zmin=-1,
+                    zmax=1,
+                    colorscale="RdBu_r",
+                    text=np.round(corr_matrix_all.values, 2),
+                    texttemplate="%{text:.2f}",
+                    textfont={"size": 10},
+                    hovertemplate="%{x} vs %{y}<br>Corr: %{z:.3f}<extra></extra>",
+                )
+            )
 
             fig_all.update_layout(
                 title=f"Stack {stack_id} – Correlation Matrix – All Devices",
