@@ -5,12 +5,7 @@ import plotly.graph_objects as go
 import plotly.express as px
 
 
-def build_stack_level_boxplots(
-    box_table: pd.DataFrame,
-    stack_id: str,
-    devices: list[str],
-    param_map: dict | None = None,
-) -> list[go.Figure]:
+def build_stack_level_boxplots(box_table: pd.DataFrame, stack_id: str, devices: list[str]) -> list[go.Figure]:
     """
     Stack-Level Boxplots: every device
     """
