@@ -3,13 +3,14 @@ import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 import plotly.express as px
+from .utils import has_valid_data
 
 
 def build_endurance_figs(end_df: "pd.DataFrame", sets: list[str]) -> list[go.Figure]:
     """
     Creates a list of Endurance Figures (one per parameter).
     """
-    if end_df is None or end_df.empty or not sets:
+    if not has_valid_data(end_df, sets):
         return []
 
     param_map = {
