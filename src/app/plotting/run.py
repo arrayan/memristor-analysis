@@ -16,8 +16,13 @@ from .fig_correlation_matrix_stack import build_stack_level_correlation_matrix_f
 
 
 def _write(fig, out_path) -> None:
-    fig.write_html(out_path)
-    print("Wrote:", out_path)
+    # Adding 'include_plotlyjs' and setting the div to be 100% height
+    fig.write_html(
+        str(out_path), 
+        include_plotlyjs=True, 
+        full_html=True,
+        config={'responsive': True} 
+    )
 
 
 # generating a JSON for Export
