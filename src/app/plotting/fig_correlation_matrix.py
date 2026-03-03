@@ -2,7 +2,6 @@ from __future__ import annotations
 import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
-import plotly.express as px
 
 
 def _prepare_data(df: pd.DataFrame, params: list[str]) -> pd.DataFrame:

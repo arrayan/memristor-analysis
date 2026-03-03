@@ -2,7 +2,8 @@ from pathlib import Path
 import PySide6.QtWidgets as qt
 from PySide6.QtCore import Qt
 from .plot_viewer import PlotViewer
-from ..core import Mode 
+from ..core import Mode
+
 
 class NavigationBar(qt.QTabWidget):
     def __init__(self, parent=None):
@@ -12,7 +13,7 @@ class NavigationBar(qt.QTabWidget):
         self.temp_root = Path(__file__).parent.parent / "temp"
         self.temp_device_dir = self.temp_root / "device"
         self.temp_stack_dir = self.temp_root / "stack"
-        
+
         # Ensure directories exist
         self.temp_device_dir.mkdir(parents=True, exist_ok=True)
         self.temp_stack_dir.mkdir(parents=True, exist_ok=True)
@@ -49,7 +50,9 @@ class NavigationBar(qt.QTabWidget):
                 "• Ctrl+Shift+O : Import Stack Data"
             )
             instructions.setAlignment(Qt.AlignCenter)
-            instructions.setStyleSheet("font-size: 14px; color: #888; line-height: 150%;")
+            instructions.setStyleSheet(
+                "font-size: 14px; color: #888; line-height: 150%;"
+            )
 
             layout.addStretch()
             layout.addWidget(title, alignment=Qt.AlignCenter)
@@ -69,7 +72,7 @@ class NavigationBar(qt.QTabWidget):
                 dev_btn.clicked.connect(lambda: self.show_analysis(Mode.DEVICE))
                 layout.addWidget(dev_btn, alignment=Qt.AlignCenter)
 
-            if stack_data_exists:                
+            if stack_data_exists:
                 stack_btn = qt.QPushButton("Continue Stack Level Analysis")
                 stack_btn.setFixedSize(300, 45)
                 stack_btn.clicked.connect(lambda: self.show_analysis(Mode.STACK))
@@ -84,35 +87,65 @@ class NavigationBar(qt.QTabWidget):
 
         # Set the base directory to search based on the import mode
         base_dir = self.temp_device_dir if mode == Mode.DEVICE else self.temp_stack_dir
-        prefix = mode.value.capitalize() 
+        prefix = mode.value.capitalize()
 
         param_labels = {
-            "VSET": "V Set", "V_reset": "V Reset", "R_LRS": "R LRS", 
-            "R_HRS": "R HRS", "I_LRS": "I LRS", "I_HRS": "I HRS",
-            "I_reset_max": "I Reset Max", "Memory_window": "Memory Window",
-            "V_set": "V Set", "V_forming": "V Forming"
+            "VSET": "V Set",
+            "V_reset": "V Reset",
+            "R_LRS": "R LRS",
+            "R_HRS": "R HRS",
+            "I_LRS": "I LRS",
+            "I_HRS": "I HRS",
+            "I_reset_max": "I Reset Max",
+            "Memory_window": "Memory Window",
+            "V_set": "V Set",
+            "V_forming": "V Forming",
         }
 
         # 1. Boxplots & CDFs (Available in both modes)
-        self.addTab(self._create_nested_tab(base_dir, "boxplots", param_labels), f"{prefix} Boxplots")
-        self.addTab(self._create_nested_tab(base_dir, "cdfs", param_labels), f"{prefix} CDF")
+        self.addTab(
+            self._create_nested_tab(base_dir, "boxplots", param_labels),
+            f"{prefix} Boxplots",
+        )
+        self.addTab(
+            self._create_nested_tab(base_dir, "cdfs", param_labels), f"{prefix} CDF"
+        )
 
         # 2. Mode-Specific Tabs
         if mode == Mode.DEVICE:
             char_labels = {"AI": "Current (A)", "NORM_COND": "Conductance (S)"}
-            self.addTab(self._create_nested_tab(base_dir, "characteristic_plots", char_labels), "Char. Plots")
-            self.addTab(self._create_nested_tab(base_dir, "endurance_performance", param_labels), "Endurance")
+            self.addTab(
+                self._create_nested_tab(base_dir, "characteristic_plots", char_labels),
+                "Char. Plots",
+            )
+            self.addTab(
+                self._create_nested_tab(
+                    base_dir, "endurance_performance", param_labels
+                ),
+                "Endurance",
+            )
 
         # 3. Correlations (Available in both modes)
         corr_labels = {
-            "V_set_vs_I_HRS": "Vset-IHRS", "V_set_vs_R_HRS": "Vset-RHRS",
-            "V_reset_vs_I_LRS": "Vreset-ILRS", "V_reset_vs_R_LRS": "Vreset-RLRS",
-            "V_reset_vs_I_reset_max": "Vreset-Ireset", "V_set_vs_V_reset": "Vset-Vreset"
+            "V_set_vs_I_HRS": "Vset-IHRS",
+            "V_set_vs_R_HRS": "Vset-RHRS",
+            "V_reset_vs_I_LRS": "Vreset-ILRS",
+            "V_reset_vs_R_LRS": "Vreset-RLRS",
+            "V_reset_vs_I_reset_max": "Vreset-Ireset",
+            "V_set_vs_V_reset": "Vset-Vreset",
         }
-        matrix_labels = {"matrix": "Correlation Matrix"} # Assuming param_id is 'matrix'
+        matrix_labels = {
+            "matrix": "Correlation Matrix"
+        }  # Assuming param_id is 'matrix'
 
-        self.addTab(self._create_nested_tab(base_dir, "correlation_plots", corr_labels), f"{prefix} Corr. Scatter")
-        self.addTab(self._create_nested_tab(base_dir, "correlation_matrices", matrix_labels), f"{prefix} Matrix")
+        self.addTab(
+            self._create_nested_tab(base_dir, "correlation_plots", corr_labels),
+            f"{prefix} Corr. Scatter",
+        )
+        self.addTab(
+            self._create_nested_tab(base_dir, "correlation_matrices", matrix_labels),
+            f"{prefix} Matrix",
+        )
 
     def _create_nested_tab(self, base_dir: Path, subfolder_name: str, labels_map: dict):
         """Helper to create a QTabWidget from a subfolder of HTML files."""
