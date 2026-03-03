@@ -80,47 +80,39 @@ class NavigationBar(qt.QTabWidget):
         self.addTab(welcome_widget, "Start")
 
     def show_analysis(self, mode):
-        """
-        Clears the tabs and populates them based on the analysis mode.
-        This is called by MainWindow.on_import_success.
-        """
-         # Local import to avoid circular dependencies
         self.clear()
 
+        # Set the base directory to search based on the import mode
+        base_dir = self.temp_device_dir if mode == Mode.DEVICE else self.temp_stack_dir
+        prefix = mode.value.capitalize() 
+
+        param_labels = {
+            "VSET": "V Set", "V_reset": "V Reset", "R_LRS": "R LRS", 
+            "R_HRS": "R HRS", "I_LRS": "I LRS", "I_HRS": "I HRS",
+            "I_reset_max": "I Reset Max", "Memory_window": "Memory Window",
+            "V_set": "V Set", "V_forming": "V Forming"
+        }
+
+        # 1. Boxplots & CDFs (Available in both modes)
+        self.addTab(self._create_nested_tab(base_dir, "boxplots", param_labels), f"{prefix} Boxplots")
+        self.addTab(self._create_nested_tab(base_dir, "cdfs", param_labels), f"{prefix} CDF")
+
+        # 2. Mode-Specific Tabs
         if mode == Mode.DEVICE:
-            # Labels mapping for filenames
-            param_labels = {
-                "V_set": "V Set", "V_reset": "V Reset",
-                "R_LRS": "R LRS", "R_HRS": "R HRS",
-                "I_LRS": "I LRS", "I_HRS": "I HRS",
-                "I_reset_max": "I Reset Max", "Memory_window": "Memory Window",
-                "VSET": "V Set", "V_forming": "V Forming",
-            }
-
             char_labels = {"AI": "Current (A)", "NORM_COND": "Conductance (S)"}
+            self.addTab(self._create_nested_tab(base_dir, "characteristic_plots", char_labels), "Char. Plots")
+            self.addTab(self._create_nested_tab(base_dir, "endurance_performance", param_labels), "Endurance")
 
-            corr_labels = {
-                "V_set_vs_I_HRS": "Vset vs IHRS", "V_set_vs_R_HRS": "Vset vs RHRS",
-                "V_reset_vs_I_LRS": "Vreset vs ILRS", "V_reset_vs_R_LRS": "Vreset vs RLRS",
-                "V_reset_vs_I_reset_max": "Vreset vs Ireset", "V_set_vs_V_reset": "Vset vs Vreset",
-            }
+        # 3. Correlations (Available in both modes)
+        corr_labels = {
+            "V_set_vs_I_HRS": "Vset-IHRS", "V_set_vs_R_HRS": "Vset-RHRS",
+            "V_reset_vs_I_LRS": "Vreset-ILRS", "V_reset_vs_R_LRS": "Vreset-RLRS",
+            "V_reset_vs_I_reset_max": "Vreset-Ireset", "V_set_vs_V_reset": "Vset-Vreset"
+        }
+        matrix_labels = {"matrix": "Correlation Matrix"} # Assuming param_id is 'matrix'
 
-            # Build the nested tab groups for Device level
-            self.addTab(self._create_nested_tab(self.temp_device_dir, "endurance_performance", param_labels), "Endurance Performance")
-            self.addTab(self._create_nested_tab(self.temp_device_dir, "boxplots", param_labels), "Endurance Boxplots")
-            self.addTab(self._create_nested_tab(self.temp_device_dir, "cdfs", param_labels), "Endurance CDF")
-            self.addTab(self._create_nested_tab(self.temp_device_dir, "characteristic_plots", char_labels), "Characteristic Plots")
-            self.addTab(self._create_nested_tab(self.temp_device_dir, "correlation_plots", corr_labels), "Device Correlation")
-
-        elif mode == Mode.STACK:
-            # Build the tabs for Stack level (Placeholder for now)
-            viewer = PlotViewer()
-            viewer.browser.setHtml(
-                "<body style='background:#111; color:#eee; display:flex; justify-content:center; "
-                "align-items:center; height:100vh; font-family:sans-serif;'>"
-                "<h1>Stack Level Analysis: Under Construction</h1></body>"
-            )
-            self.addTab(viewer, "Stack Overview")
+        self.addTab(self._create_nested_tab(base_dir, "correlation_plots", corr_labels), f"{prefix} Corr. Scatter")
+        self.addTab(self._create_nested_tab(base_dir, "correlation_matrices", matrix_labels), f"{prefix} Matrix")
 
     def _create_nested_tab(self, base_dir: Path, subfolder_name: str, labels_map: dict):
         """Helper to create a QTabWidget from a subfolder of HTML files."""

@@ -13,6 +13,7 @@ class PlotViewer(QWidget):
         self.html_path: str | None = None
         self.main_layout = QVBoxLayout(self)
         self.main_layout.setContentsMargins(0, 0, 0, 0)  # Remove padding
+        self.main_layout.setSpacing(0)
 
         self.browser = QWebEngineView()
         self.main_layout.addWidget(self.browser)

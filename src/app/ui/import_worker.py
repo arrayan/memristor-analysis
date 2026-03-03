@@ -1,6 +1,5 @@
+import os
 from PySide6.QtCore import QObject, Signal, Slot
-
-# Replace 'plotting_module' with the actual filename/path of your plotting script
 from ..plotting.run import main as run_plotting_pipeline
 
 
@@ -22,6 +21,8 @@ class ImportWorker(QObject):
             # --- STEP 1: Data Conversion (Importing to DuckDB) ---
             self.status_message.emit("Phase 1/2: Updating database from raw files...")
             self.progress.emit(10)
+
+            os.environ["MEMRISTOR_MODE"] = self.mode.value
 
             converter = self.converter_class("output.duckdb")
             converter.convert(self.path)
