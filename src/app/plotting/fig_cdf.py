@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 import plotly.express as px
+from .utils import has_valid_data
 
 
 def _cdf_xy(values: pd.Series, is_log: bool) -> tuple[np.ndarray, np.ndarray]:
@@ -33,7 +34,7 @@ def build_cdf_figs(cdf_table: "pd.DataFrame", sets: list[str]) -> list[go.Figure
     Selectively applies Log or Linear scales based on the parameter type.
     Forces at least two log magnitudes to be visible for log scales.
     """
-    if cdf_table is None or cdf_table.empty or not sets:
+    if not has_valid_data(cdf_table, sets):
         return []
 
     param_map = {

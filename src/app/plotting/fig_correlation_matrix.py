@@ -2,6 +2,8 @@ from __future__ import annotations
 import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
+from .utils import has_valid_data, find_device_sets
+
 
 def _prepare_data(df: pd.DataFrame, params: list[str]) -> pd.DataFrame:
     """Helper: Bereinigt Daten für Correlation Matrix."""
@@ -45,7 +47,7 @@ def build_correlation_matrix_figs(
     - One matrix per device
     - One matrix per set
     """
-    if scatter_df is None or scatter_df.empty or not sets:
+    if not has_valid_data(scatter_df, devices):
         return []
 
     params = ["V_set", "V_reset", "I_LRS", "I_HRS", "R_LRS", "R_HRS", "I_reset_max"]
@@ -94,17 +96,7 @@ def build_correlation_matrix_figs(
 
     if devices:
         for device in devices:
-            # find all sets
-            device_pattern = f"_{device}_"
-            device_sets = [
-                s
-                for s in scatter_df["source_file"].unique()
-                if device_pattern in s or s.endswith(f"_{device}")
-            ]
-            if not device_sets:
-                device_sets = [
-                    s for s in scatter_df["source_file"].unique() if device in s
-                ]
+            device_sets = find_device_sets(scatter_df, device)
 
             if not device_sets:
                 continue

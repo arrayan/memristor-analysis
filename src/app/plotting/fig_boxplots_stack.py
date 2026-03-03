@@ -3,13 +3,14 @@ import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 import plotly.express as px
+from .utils import has_valid_data
 
 
 def build_stack_level_boxplots(box_table: pd.DataFrame, stack_id: str, devices: list[str]) -> list[go.Figure]:
     """
     Stack-Level Boxplots: every device
     """
-    if box_table is None or box_table.empty or not devices:
+    if not has_valid_data(box_table, devices):
         return []
 
     # param map:
