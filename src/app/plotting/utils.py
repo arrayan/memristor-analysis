@@ -1,6 +1,7 @@
 from __future__ import annotations
 import pandas as pd
 
+
 def has_valid_data(
     df: pd.DataFrame | None,
     items: list | None = None,
@@ -19,7 +20,9 @@ def has_valid_data(
     return True
 
 
-def find_device_sets(df: pd.DataFrame, device: str, source_col: str = "source_file") -> list[str]:
+def find_device_sets(
+    df: pd.DataFrame, device: str, source_col: str = "source_file"
+) -> list[str]:
     """
     Find all unique sets for a specific device from a DataFrame.
 
@@ -37,8 +40,7 @@ def find_device_sets(df: pd.DataFrame, device: str, source_col: str = "source_fi
     all_sources = df[source_col].unique()
     device_pattern = f"_{device}_"
     device_sets = [
-        s for s in all_sources
-        if device_pattern in s or s.endswith(f"_{device}")
+        s for s in all_sources if device_pattern in s or s.endswith(f"_{device}")
     ]
 
     if not device_sets:
