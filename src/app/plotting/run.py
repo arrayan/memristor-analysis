@@ -34,9 +34,7 @@ def main() -> None:
         stack_id = next(iter(data.sets)).split("_")[0] if data.sets else "Unknown"
         print(f"Warning: No stack_id found in data, using inferred: {stack_id}")
 
-    devices = sorted(
-        set(s.split("_")[1] for s in data.sets if len(s.split("_")) > 1)
-    )
+    devices = sorted(set(s.split("_")[1] for s in data.sets if len(s.split("_")) > 1))
 
     #  Characteristic
     def write_characteristic_figs():
