@@ -2,45 +2,32 @@ from pathlib import Path
 import PySide6.QtWidgets as qt
 from PySide6.QtCore import Qt
 from .plot_viewer import PlotViewer
-
+from ..core import Mode 
 
 class NavigationBar(qt.QTabWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
 
-        # Resolve the path to src/app/temp/device
-        self.temp_device_dir = Path(__file__).parent.parent / "temp" / "device"
+        # Resolve paths to temp folders
+        self.temp_root = Path(__file__).parent.parent / "temp"
+        self.temp_device_dir = self.temp_root / "device"
+        self.temp_stack_dir = self.temp_root / "stack"
+        
+        # Ensure directories exist
         self.temp_device_dir.mkdir(parents=True, exist_ok=True)
+        self.temp_stack_dir.mkdir(parents=True, exist_ok=True)
 
-        self.setup_ui()
         self.show_welcome_screen()
 
-    def setup_ui(self):
-        """Sets up the dropdown in the corner."""
-        self.corner_container = qt.QWidget()
-        self.corner_layout = qt.QHBoxLayout(self.corner_container)
-        self.corner_layout.setContentsMargins(10, 2, 20, 2)
-
-        level_label = qt.QLabel("Analysis Level:")
-        self.level_dropdown = qt.QComboBox()
-        self.level_dropdown.addItems(["Device Level", "Stack Level"])
-        self.level_dropdown.setFixedWidth(150)
-
-        # Only switch tabs when user explicitly picks a level
-        self.level_dropdown.activated.connect(self.handle_dropdown_change)
-
-        self.corner_layout.addWidget(level_label)
-        self.corner_layout.addWidget(self.level_dropdown)
-        self.setCornerWidget(self.corner_container, Qt.TopLeftCorner)
-
-    def is_device_folder_empty(self):
-        """Checks for HTML files in temp folder."""
-        if not self.temp_device_dir.exists():
+    def is_folder_empty(self, directory: Path):
+        """Checks if a directory exists and contains any HTML files."""
+        if not directory.exists():
             return True
-        return len(list(self.temp_device_dir.glob("*.html"))) == 0
+        # Check recursively if any .html files exist in any subfolders
+        return len(list(directory.rglob("*.html"))) == 0
 
     def show_welcome_screen(self):
-        """Displays the startup information tab."""
+        """Displays the startup information tab or 'Continue' buttons."""
         self.clear()
 
         welcome_widget = qt.QWidget()
@@ -48,8 +35,11 @@ class NavigationBar(qt.QTabWidget):
         layout.setAlignment(Qt.AlignCenter)
         layout.setSpacing(20)
 
-        if self.is_device_folder_empty():
-            # Scenario A: Folder is empty
+        device_data_exists = not self.is_folder_empty(self.temp_device_dir)
+        stack_data_exists = not self.is_folder_empty(self.temp_stack_dir)
+
+        if not device_data_exists and not stack_data_exists:
+            # Scenario A: No data at all
             title = qt.QLabel("Please import data to start the analysis.")
             title.setStyleSheet("font-size: 18px; font-weight: bold; color: #ccc;")
 
@@ -59,111 +49,83 @@ class NavigationBar(qt.QTabWidget):
                 "• Ctrl+Shift+O : Import Stack Data"
             )
             instructions.setAlignment(Qt.AlignCenter)
-            instructions.setStyleSheet(
-                "font-size: 14px; color: #888; line-height: 150%;"
-            )
+            instructions.setStyleSheet("font-size: 14px; color: #888; line-height: 150%;")
 
             layout.addStretch()
             layout.addWidget(title, alignment=Qt.AlignCenter)
             layout.addWidget(instructions, alignment=Qt.AlignCenter)
             layout.addStretch()
         else:
-            # Scenario B: Folder has data
+            # Scenario B: Existing data found
             title = qt.QLabel("Existing analysis data found.")
             title.setStyleSheet("font-size: 18px; font-weight: bold; color: #ccc;")
-
-            continue_btn = qt.QPushButton("Continue with last analysis")
-            continue_btn.setFixedWidth(250)
-            continue_btn.setFixedHeight(40)
-            continue_btn.clicked.connect(
-                lambda: self.update_tabs_by_level("Device Level")
-            )
-
             layout.addStretch()
             layout.addWidget(title, alignment=Qt.AlignCenter)
-            layout.addWidget(continue_btn, alignment=Qt.AlignCenter)
+
+            if device_data_exists:
+                # We import Mode locally here if needed, or use strings if you prefer
+                dev_btn = qt.QPushButton("Continue Device Level Analysis")
+                dev_btn.setFixedSize(300, 45)
+                dev_btn.clicked.connect(lambda: self.show_analysis(Mode.DEVICE))
+                layout.addWidget(dev_btn, alignment=Qt.AlignCenter)
+
+            if stack_data_exists:                
+                stack_btn = qt.QPushButton("Continue Stack Level Analysis")
+                stack_btn.setFixedSize(300, 45)
+                stack_btn.clicked.connect(lambda: self.show_analysis(Mode.STACK))
+                layout.addWidget(stack_btn, alignment=Qt.AlignCenter)
+
             layout.addStretch()
 
         self.addTab(welcome_widget, "Start")
 
-    def handle_dropdown_change(self):
-        self.update_tabs_by_level(self.level_dropdown.currentText())
-
-    def update_tabs_by_level(self, level_text):
+    def show_analysis(self, mode):
+        """
+        Clears the tabs and populates them based on the analysis mode.
+        This is called by MainWindow.on_import_success.
+        """
+         # Local import to avoid circular dependencies
         self.clear()
 
-        if level_text == "Device Level":
-            # Define Parameter Labels for Nested Groups
+        if mode == Mode.DEVICE:
+            # Labels mapping for filenames
             param_labels = {
-                "V_set": "V Set",
-                "V_reset": "V Reset",
-                "R_LRS": "R LRS",
-                "R_HRS": "R HRS",
-                "I_LRS": "I LRS",
-                "I_HRS": "I HRS",
-                "I_reset_max": "I Reset Max",
-                "Memory_window": "Memory Window",
-                "VSET": "V Set",  # "V_reset": "V Reset",
-                "V_forming": "V Forming",
+                "V_set": "V Set", "V_reset": "V Reset",
+                "R_LRS": "R LRS", "R_HRS": "R HRS",
+                "I_LRS": "I LRS", "I_HRS": "I HRS",
+                "I_reset_max": "I Reset Max", "Memory_window": "Memory Window",
+                "VSET": "V Set", "V_forming": "V Forming",
             }
 
             char_labels = {"AI": "Current (A)", "NORM_COND": "Conductance (S)"}
 
             corr_labels = {
-                "V_set_vs_I_HRS": "Vset vs IHRS",
-                "V_set_vs_R_HRS": "Vset vs RHRS",
-                "V_reset_vs_I_LRS": "Vreset vs ILRS",
-                "V_reset_vs_R_LRS": "Vreset vs RLRS",
-                "V_reset_vs_I_reset_max": "Vreset vs Ireset",
-                "V_set_vs_V_reset": "Vset vs Vreset",
+                "V_set_vs_I_HRS": "Vset vs IHRS", "V_set_vs_R_HRS": "Vset vs RHRS",
+                "V_reset_vs_I_LRS": "Vreset vs ILRS", "V_reset_vs_R_LRS": "Vreset vs RLRS",
+                "V_reset_vs_I_reset_max": "Vreset vs Ireset", "V_set_vs_V_reset": "Vset vs Vreset",
             }
 
-            # 3. Create All Nested Tab Groups
-            self.addTab(
-                self._create_nested_tab("endurance_performance", param_labels),
-                "Endurance Performance",
-            )
-            self.addTab(
-                self._create_nested_tab("boxplots", param_labels), "Endurance Boxplots"
-            )
-            self.addTab(self._create_nested_tab("cdfs", param_labels), "Endurance CDF")
-            self.addTab(
-                self._create_nested_tab("characteristic_plots", char_labels),
-                "Characteristic Plots",
-            )
-            self.addTab(
-                self._create_nested_tab("correlation_plots", corr_labels),
-                "Device Correlation",
-            )
+            # Build the nested tab groups for Device level
+            self.addTab(self._create_nested_tab(self.temp_device_dir, "endurance_performance", param_labels), "Endurance Performance")
+            self.addTab(self._create_nested_tab(self.temp_device_dir, "boxplots", param_labels), "Endurance Boxplots")
+            self.addTab(self._create_nested_tab(self.temp_device_dir, "cdfs", param_labels), "Endurance CDF")
+            self.addTab(self._create_nested_tab(self.temp_device_dir, "characteristic_plots", char_labels), "Characteristic Plots")
+            self.addTab(self._create_nested_tab(self.temp_device_dir, "correlation_plots", corr_labels), "Device Correlation")
 
-    def _create_nested_tab(self, subfolder_name, labels_map):
-        """Helper to create a QTabWidget from a subfolder of HTML files."""
-        sub_tab_widget = qt.QTabWidget()
-        folder_path = self.temp_device_dir / subfolder_name
-
-        found_any = False
-        for param_id, label in labels_map.items():
-            file_path = folder_path / f"{param_id}.html"
-            if file_path.exists():
-                viewer = PlotViewer()
-                viewer.load_html_file(str(file_path))
-                sub_tab_widget.addTab(viewer, label)
-                found_any = True
-
-        if not found_any:
-            # Fallback if folder is empty or files missing
+        elif mode == Mode.STACK:
+            # Build the tabs for Stack level (Placeholder for now)
             viewer = PlotViewer()
             viewer.browser.setHtml(
-                "<body style='background:#111; color:#555; display:flex; justify-content:center; align-items:center; height:100vh;'><div>No data available.</div></body>"
+                "<body style='background:#111; color:#eee; display:flex; justify-content:center; "
+                "align-items:center; height:100vh; font-family:sans-serif;'>"
+                "<h1>Stack Level Analysis: Under Construction</h1></body>"
             )
-            sub_tab_widget.addTab(viewer, "Empty")
+            self.addTab(viewer, "Stack Overview")
 
-        return sub_tab_widget
-
-    def _create_nested_tab(self, subfolder_name, labels_map):
+    def _create_nested_tab(self, base_dir: Path, subfolder_name: str, labels_map: dict):
         """Helper to create a QTabWidget from a subfolder of HTML files."""
         sub_tab_widget = qt.QTabWidget()
-        folder_path = self.temp_device_dir / subfolder_name
+        folder_path = base_dir / subfolder_name
 
         found_any = False
         for param_id, label in labels_map.items():
@@ -177,42 +139,35 @@ class NavigationBar(qt.QTabWidget):
         if not found_any:
             viewer = PlotViewer()
             viewer.browser.setHtml(
-                "<body style='background:#111; color:#555;'><div>No data.</div></body>"
+                "<body style='background:#111; color:#555; display:flex; justify-content:center; "
+                "align-items:center; height:100vh; font-family:sans-serif;'><div>No data available in "
+                f"{subfolder_name}.</div></body>"
             )
             sub_tab_widget.addTab(viewer, "Empty")
 
         return sub_tab_widget
-
-    def _set_missing_file_msg(self, viewer, filename):
-        """Helper to set error message in browser."""
-        viewer.browser.setHtml(
-            f"<body style='background:#111; color:#555; display:flex; "
-            f"justify-content:center; align-items:center; height:100vh; "
-            f"font-family:sans-serif;'><div>File {filename} not yet generated.</div></body>"
-        )
 
     def get_current_viewer(self) -> PlotViewer:
+        """Returns the active PlotViewer even if it is nested inside another TabWidget."""
         widget = self.currentWidget()
-
-        # If it's a direct PlotViewer (e.g., Endurance Performance)
         if isinstance(widget, PlotViewer):
             return widget
-
-        # If it's the nested TabWidget (Boxplots)
         if isinstance(widget, qt.QTabWidget):
             sub_widget = widget.currentWidget()
             if isinstance(sub_widget, PlotViewer):
                 return sub_widget
-
         return None
 
     def get_all_viewers(self) -> list[PlotViewer]:
+        """Utility to get all PlotViewers currently instantiated."""
         viewers = []
-
         for i in range(self.count()):
             widget = self.widget(i)
-
             if isinstance(widget, PlotViewer):
                 viewers.append(widget)
-
+            elif isinstance(widget, qt.QTabWidget):
+                for j in range(widget.count()):
+                    sub_widget = widget.widget(j)
+                    if isinstance(sub_widget, PlotViewer):
+                        viewers.append(sub_widget)
         return viewers
