@@ -19,10 +19,10 @@ from .fig_correlation_matrix_stack import build_stack_level_correlation_matrix_f
 def _write(fig, out_path) -> None:
     # Adding 'include_plotlyjs' and setting the div to be 100% height
     fig.write_html(
-        str(out_path), 
-        include_plotlyjs=True, 
+        str(out_path),
+        include_plotlyjs=True,
         full_html=True,
-        config={'responsive': True} 
+        config={"responsive": True},
     )
 
 

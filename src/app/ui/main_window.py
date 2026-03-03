@@ -190,16 +190,15 @@ class MainWindow(qt.QMainWindow):
 
     def on_import_success(self):
         self.pd.close()
-        
+
         # Get the mode from the worker
-        import_mode = self.worker.mode 
-        
+        import_mode = self.worker.mode
+
         # This triggers the dynamic tab generation in NavigationBar
         self.nav_bar.show_analysis(import_mode)
-        
+
         qt.QMessageBox.information(
-            self, "Success", 
-            f"Successfully processed {import_mode.value} data."
+            self, "Success", f"Successfully processed {import_mode.value} data."
         )
 
     def on_import_error(self, err_msg):
