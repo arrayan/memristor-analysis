@@ -4,6 +4,7 @@ import pandas as pd
 import plotly.graph_objects as go
 import plotly.express as px
 from .fig_cdf import _cdf_xy
+from .utils import has_valid_data, find_device_sets
 
 
 def build_stack_level_cdf_figs(
@@ -12,7 +13,7 @@ def build_stack_level_cdf_figs(
     """
     Stack-Level CDFs: Every device aggregates all his endurance sets.
     """
-    if cdf_table is None or cdf_table.empty or not devices:
+    if not has_valid_data(cdf_table, devices):
         return []
 
     param_map = {
@@ -42,18 +43,7 @@ def build_stack_level_cdf_figs(
         all_x_vals = []
 
         for device in devices:
-            # find all sets
-            device_pattern = f"_{device}_"
-            device_sets = [
-                s
-                for s in cdf_table["source_file"].unique()
-                if device_pattern in s or s.endswith(f"_{device}")
-            ]
-
-            if not device_sets:
-                device_sets = [
-                    s for s in cdf_table["source_file"].unique() if device in s
-                ]
+            device_sets = find_device_sets(cdf_table, device)
 
             # aggregate
             df_device = cdf_table[cdf_table["source_file"].isin(device_sets)]

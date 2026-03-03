@@ -2,6 +2,7 @@ from __future__ import annotations
 import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
+from .utils import has_valid_data, find_device_sets
 
 
 def build_stack_level_correlation_matrix_figs(
@@ -11,7 +12,7 @@ def build_stack_level_correlation_matrix_figs(
     Stack-Level: Correlation matrix heatmap (one per device).
     Every device aggregates his endurance-sets.
     """
-    if scatter_df is None or scatter_df.empty or not devices:
+    if not has_valid_data(scatter_df, devices):
         return []
 
     params = ["V_set", "V_reset", "I_LRS", "I_HRS", "R_LRS", "R_HRS", "I_reset_max"]
@@ -29,18 +30,14 @@ def build_stack_level_correlation_matrix_figs(
     if len(available_params) < 2:
         return []
 
+    # to make sure its initialized
+    log_params: list[str] = ["I_LRS", "I_HRS", "R_LRS", "R_HRS", "I_reset_max"]
+    log_params = [p for p in log_params if p in available_params]
+
     figures = []
 
     for device in devices:
-        # find all sets for device
-        device_pattern = f"_{device}_"
-        device_sets = [
-            s
-            for s in scatter_df["source_file"].unique()
-            if device_pattern in s or s.endswith(f"_{device}")
-        ]
-        if not device_sets:
-            device_sets = [s for s in scatter_df["source_file"].unique() if device in s]
+        device_sets = find_device_sets(scatter_df, device)
 
         # aggregate all data from a device
         df_device = scatter_df[scatter_df["source_file"].isin(device_sets)].copy()
@@ -95,7 +92,6 @@ def build_stack_level_correlation_matrix_figs(
 
         figures.append(fig)
 
-    # Zusätzlich: Eine Matrix für den gesamten Stack (alle Devices aggregiert)
     df_all = scatter_df[
         scatter_df["source_file"].isin(
             [s for d in devices for s in scatter_df["source_file"].unique() if d in s]

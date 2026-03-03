@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 import plotly.express as px
+from .utils import has_valid_data
 
 
 def build_boxplots_figs(box_table: "pd.DataFrame", sets: list[str]) -> list[go.Figure]:
@@ -14,7 +15,7 @@ def build_boxplots_figs(box_table: "pd.DataFrame", sets: list[str]) -> list[go.F
     - Voltages (VSET, V_reset, V_forming) use Linear Scale.
     - Log scales are forced to display at least one major magnitude grid line.
     """
-    if box_table is None or box_table.empty or not sets:
+    if not has_valid_data(box_table, sets):
         return []
 
     # 1. Define Scale Requirements

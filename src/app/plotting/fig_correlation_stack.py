@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
 import plotly.express as px
+from .utils import has_valid_data, find_device_sets
 
 
 def build_stack_level_correlation_figs(
@@ -12,7 +13,7 @@ def build_stack_level_correlation_figs(
     Stack-Level: Correlation scatter plots (one per pair).
     Every device aggregates his endurance-sets.
     """
-    if scatter_df is None or scatter_df.empty or not devices:
+    if not has_valid_data(scatter_df, devices):
         return []
 
     pairs = [
@@ -43,17 +44,7 @@ def build_stack_level_correlation_figs(
         all_x, all_y = [], []
 
         for device in devices:
-            # find all sets for device
-            device_pattern = f"_{device}_"
-            device_sets = [
-                s
-                for s in scatter_df["source_file"].unique()
-                if device_pattern in s or s.endswith(f"_{device}")
-            ]
-            if not device_sets:
-                device_sets = [
-                    s for s in scatter_df["source_file"].unique() if device in s
-                ]
+            device_sets = find_device_sets(scatter_df, device)
 
             # aggregate
             df_device = scatter_df[scatter_df["source_file"].isin(device_sets)].copy()

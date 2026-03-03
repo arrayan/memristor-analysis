@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
 import plotly.express as px
+from .utils import has_valid_data
 
 
 def build_correlation_scatter_figs(
@@ -14,7 +15,7 @@ def build_correlation_scatter_figs(
     - Automatic Log/Linear scaling based on parameter type.
     - Major magnitudes only for log axes.
     """
-    if scatter_df is None or scatter_df.empty or not sets:
+    if not has_valid_data(scatter_df, sets):
         return []
 
     # 1. Define pairs and their scale types
