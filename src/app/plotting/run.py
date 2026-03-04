@@ -1,4 +1,5 @@
 from __future__ import annotations
+from pathlib import Path
 
 from .config import load_config
 from .pipeline import load_all
@@ -31,10 +32,32 @@ def main() -> None:
     data = load_all(cfg)
     stack_id = getattr(data, "stack_id", None)
     if stack_id is None:
-        stack_id = next(iter(data.sets)).split("_")[0] if data.sets else "Unknown"
-        print(f"Warning: No stack_id found in data, using inferred: {stack_id}")
+        if data.sets:
+            sample_path = Path(next(iter(data.sets)))
+            stack_id = sample_path.stem.split("_")[0] if "_" in sample_path.stem else sample_path.stem
+            print(f"Info: Inferred stack_id from sets: {stack_id}")
+        else:
+            stack_id = "Unknown"
+            print("Warning: No sets found, using Unknown as stack_id")
 
-    devices = sorted(set(s.split("_")[1] for s in data.sets if len(s.split("_")) > 1))
+    devices = []
+    if data.sets and stack_id != "Unknown":
+        device_set = set()
+        for s in data.sets:
+            path = Path(s)
+            stem = path.stem
+            if stem.startswith(f"{stack_id}_"):
+                remainder = stem[len(stack_id) + 1:]
+                if "_" in remainder:
+                    device = remainder.split("_")[0]
+                else:
+                    device = remainder
+                if device:
+                    device_set.add(device)
+        devices = sorted(device_set)
+
+    if not devices:
+        print(f"Warning: No devices found for stack {stack_id}")
 
     #  Characteristic
     def write_characteristic_figs():
