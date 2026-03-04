@@ -131,7 +131,9 @@ class NavigationBar(qt.QTabWidget):
             char_labels = {"AI": "Current (A)", "NORM_COND": "Conductance (S)"}
 
             self.addTab(
-                self._create_nested_tab(base_dir, "endurance_performance", param_labels),
+                self._create_nested_tab(
+                    base_dir, "endurance_performance", param_labels
+                ),
                 "Endurance Performance",
             )
             self.addTab(
@@ -151,7 +153,11 @@ class NavigationBar(qt.QTabWidget):
                 "Device Corr. Scatter",
             )
             self.addTab(
-                self._create_nested_tab(base_dir, "correlation_matrices", self._discover_labels(base_dir / "correlation_matrices")),
+                self._create_nested_tab(
+                    base_dir,
+                    "correlation_matrices",
+                    self._discover_labels(base_dir / "correlation_matrices"),
+                ),
                 "Device Matrix",
             )
 
@@ -169,7 +175,9 @@ class NavigationBar(qt.QTabWidget):
                 "Char. Plots",
             )
             self.addTab(
-                self._create_nested_tab(base_dir, "endurance_performance", param_labels),
+                self._create_nested_tab(
+                    base_dir, "endurance_performance", param_labels
+                ),
                 "Endurance",
             )
             self.addTab(
@@ -193,15 +201,27 @@ class NavigationBar(qt.QTabWidget):
                 "Corr. Scatter",
             )
             self.addTab(
-                self._create_nested_tab(base_dir, "correlation_plots_stack_level", corr_labels),
+                self._create_nested_tab(
+                    base_dir, "correlation_plots_stack_level", corr_labels
+                ),
                 "Stack Corr. Scatter",
             )
             self.addTab(
-                self._create_nested_tab(base_dir, "correlation_matrices", self._discover_labels(base_dir / "correlation_matrices")),
+                self._create_nested_tab(
+                    base_dir,
+                    "correlation_matrices",
+                    self._discover_labels(base_dir / "correlation_matrices"),
+                ),
                 "Matrix",
             )
             self.addTab(
-                self._create_nested_tab(base_dir, "correlation_matrices_stack_level", self._discover_labels(base_dir / "correlation_matrices_stack_level")),
+                self._create_nested_tab(
+                    base_dir,
+                    "correlation_matrices_stack_level",
+                    self._discover_labels(
+                        base_dir / "correlation_matrices_stack_level"
+                    ),
+                ),
                 "Stack Matrix",
             )
 
