@@ -13,7 +13,7 @@ class Config:
     endurance_set_like: str = "%endurance_set%"
     endurance_reset_like: str = "%endurance_reset%"
     electroforming_like: str = "%Electroforming%"
-    leakage_like: str = "%Leakage%"
+    leakage_like: str = "%leakage%"
 
     # Output HTML files
     characteristic_html: str = "characteristic_plots.html"
