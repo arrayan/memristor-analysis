@@ -29,6 +29,8 @@ def _write_json(fig, out_path) -> None:
 def main() -> None:
     cfg = load_config()
     data = load_all(cfg)
+    # debug print to verify data loading and structure
+    # print(data.leakage_i_by_device)
 
     stack_id = getattr(data, "stack_id", None)
     if stack_id is None:

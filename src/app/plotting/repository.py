@@ -19,7 +19,7 @@ class MemristorRepository:
             """
             SELECT DISTINCT source_file
             FROM cycles
-            WHERE source_file LIKE ?
+            WHERE source_file ILIKE ?
             ORDER BY source_file
             """,
             [endurance_like],
@@ -33,7 +33,7 @@ class MemristorRepository:
             """
             SELECT DISTINCT source_file
             FROM cycles
-            WHERE source_file LIKE ?
+            WHERE source_file ILIKE ?
             ORDER BY source_file
             """,
             [endurance_reset_like],
@@ -111,7 +111,7 @@ class MemristorRepository:
     def load_leakage_current_per_device(
         self,
         devices: list[str],
-        leakage_like: str = "%Leakage%",
+        leakage_like: str = "%leakage%",
     ) -> dict[str, float]:
         """
         Per-device leakage current: MAX(|AI|) from each device's leakage file.
@@ -141,7 +141,7 @@ class MemristorRepository:
             """
             SELECT MAX(VFORM) AS V_forming_global
             FROM cycles
-            WHERE source_file LIKE ?
+            WHERE source_file ILIKE ?
             """,
             [electroforming_like],
         ).df()
