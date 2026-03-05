@@ -7,8 +7,7 @@ from .utils import has_valid_data, find_device_sets
 
 
 def _prepare_leakage_with_forming(
-        leakage_df: pd.DataFrame | None,
-        forming_v: float | None
+    leakage_df: pd.DataFrame | None, forming_v: float | None
 ) -> pd.DataFrame:
     """
     Bereitet Leakage-Daten vor, berechnet R_pristine und fügt V_forming hinzu.
@@ -26,11 +25,7 @@ def _prepare_leakage_with_forming(
     if "AV" in df.columns and "I_leakage" in df.columns:
         v = pd.to_numeric(df["AV"], errors="coerce")
         i = df["I_leakage"]
-        df["R_pristine"] = np.where(
-            (v.notna()) & (i.notna()) & (i > 0),
-            v / i,
-            np.nan
-        )
+        df["R_pristine"] = np.where((v.notna()) & (i.notna()) & (i > 0), v / i, np.nan)
 
     # V_forming als konstante Spalte hinzufügen (für Korrelation)
     if forming_v is not None and not np.isnan(forming_v):
@@ -40,12 +35,12 @@ def _prepare_leakage_with_forming(
 
 
 def build_stack_level_correlation_figs(
-        scatter_df: "pd.DataFrame",
-        stack_id: str,
-        devices: list[str],
-        leakage_df: "pd.DataFrame | None" = None,
-        forming_v: "float | None" = None,
-        first_v_reset: "dict[str, float] | None" = None,
+    scatter_df: "pd.DataFrame",
+    stack_id: str,
+    devices: list[str],
+    leakage_df: "pd.DataFrame | None" = None,
+    forming_v: "float | None" = None,
+    first_v_reset: "dict[str, float] | None" = None,
 ) -> list[go.Figure]:
     """
     Stack-Level: Correlation scatter plots (one per pair).
@@ -86,7 +81,11 @@ def build_stack_level_correlation_figs(
     )
     if include_forming_reset_pair:
         forming_reset_rows = [
-            {"device": device, "V_forming": forming_v, "first_V_reset": first_v_reset[device]}
+            {
+                "device": device,
+                "V_forming": forming_v,
+                "first_V_reset": first_v_reset[device],
+            }
             for device in devices
             if device in first_v_reset
         ]
@@ -101,14 +100,17 @@ def build_stack_level_correlation_figs(
     base_cols = px.colors.qualitative.Plotly
     device_color_map = {d: base_cols[i % len(base_cols)] for i, d in enumerate(devices)}
 
-    tick_vals = [10.0 ** i for i in range(-15, 16)]
+    tick_vals = [10.0**i for i in range(-15, 16)]
     tick_text = [f"1e{i}" if i != 0 else "1" for i in range(-15, 16)]
 
     figures = []
 
     for x_col, y_col, title_text in pairs:
         # Bestimme Datenquelle
-        is_leakage_pair = x_col in ["V_forming"] and y_col in ["I_leakage", "R_pristine"]
+        is_leakage_pair = x_col in ["V_forming"] and y_col in [
+            "I_leakage",
+            "R_pristine",
+        ]
         is_forming_reset_pair = x_col == "V_forming" and y_col == "first_V_reset"
 
         if is_leakage_pair:
@@ -146,7 +148,9 @@ def build_stack_level_correlation_figs(
                         x=[x_val],
                         y=[y_val],
                         mode="markers",
-                        marker=dict(color=device_color_map.get(device), size=10, opacity=0.9),
+                        marker=dict(
+                            color=device_color_map.get(device), size=10, opacity=0.9
+                        ),
                         name=device,
                         legendgroup=device,
                         hovertemplate=f"Device: {device}<br>V_forming: %{{x:.3f}} V<br>1st V_reset: %{{y:.3f}} V<extra></extra>",
@@ -157,7 +161,9 @@ def build_stack_level_correlation_figs(
                 device_sets = find_device_sets(data_source, device)
 
                 # aggregate
-                df_device = data_source[data_source["source_file"].isin(device_sets)].copy()
+                df_device = data_source[
+                    data_source["source_file"].isin(device_sets)
+                ].copy()
                 if df_device.empty:
                     continue
 
@@ -180,7 +186,9 @@ def build_stack_level_correlation_figs(
                         x=df_plot[x_col],
                         y=df_plot[y_col],
                         mode="markers",
-                        marker=dict(color=device_color_map[device], size=7, opacity=0.7),
+                        marker=dict(
+                            color=device_color_map[device], size=7, opacity=0.7
+                        ),
                         name=device,
                         legendgroup=device,
                         hovertemplate=f"Device: {device}<br>{x_col}: %{{x}}<br>{y_col}: %{{y}}<extra></extra>",

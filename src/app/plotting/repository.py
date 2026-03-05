@@ -120,7 +120,9 @@ class MemristorRepository:
             [source_file],
         ).df()
 
-    def list_reset_sets(self, endurance_reset_like: str = "%endurance_reset%") -> list[str]:
+    def list_reset_sets(
+        self, endurance_reset_like: str = "%endurance_reset%"
+    ) -> list[str]:
         rows = self.conn.execute(
             """
             SELECT DISTINCT source_file

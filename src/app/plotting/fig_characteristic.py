@@ -180,12 +180,11 @@ def build_characteristic_figs(
         first_reset_trace = True
 
         # Set and reset files get distinct colors; same file = same color across cycles.
-        all_legend_files = (
-            device_set_files[device]
-            + device_reset_files.get(device, [])
-        )
+        all_legend_files = device_set_files[device] + device_reset_files.get(device, [])
         file_colors = px.colors.qualitative.Plotly
-        file_color_map = {f: file_colors[i % len(file_colors)] for i, f in enumerate(all_legend_files)}
+        file_color_map = {
+            f: file_colors[i % len(file_colors)] for i, f in enumerate(all_legend_files)
+        }
 
         # --- Set sweeps (all files for this device) ---
         for s in device_set_files[device]:

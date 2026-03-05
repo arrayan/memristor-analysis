@@ -23,20 +23,16 @@ def _prepare_leakage_data(leakage_df: pd.DataFrame) -> pd.DataFrame:
     if "AV" in df.columns and "I_leakage" in df.columns:
         v = pd.to_numeric(df["AV"], errors="coerce")
         i = df["I_leakage"]
-        df["R_pristine"] = np.where(
-            (v.notna()) & (i.notna()) & (i > 0),
-            v / i,
-            np.nan
-        )
+        df["R_pristine"] = np.where((v.notna()) & (i.notna()) & (i > 0), v / i, np.nan)
 
     return df
 
 
 def build_stack_level_cdf_figs(
-        cdf_table: "pd.DataFrame",
-        stack_id: str,
-        devices: list[str],
-        leakage_df: "pd.DataFrame | None" = None,
+    cdf_table: "pd.DataFrame",
+    stack_id: str,
+    devices: list[str],
+    leakage_df: "pd.DataFrame | None" = None,
 ) -> list[go.Figure]:
     """
     Stack-Level CDFs: Every device aggregates all his endurance sets.
@@ -67,7 +63,7 @@ def build_stack_level_cdf_figs(
     cols = px.colors.sample_colorscale("Viridis", max(len(devices), 2))
     color_map = {d: cols[i] for i, d in enumerate(devices)}
 
-    tick_vals = [10.0 ** i for i in range(-15, 16)]
+    tick_vals = [10.0**i for i in range(-15, 16)]
     tick_text = [f"1e{i}" if i != 0 else "1" for i in range(-15, 16)]
 
     figures = []

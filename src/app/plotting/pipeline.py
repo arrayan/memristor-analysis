@@ -52,10 +52,18 @@ def load_all(cfg: Config) -> LoadedData:
 
         # raw for reset (butterfly plot)
         reset_sets = repo.list_reset_sets(cfg.endurance_reset_like)
-        raw_reset = {s: repo.load_cycles_for_reset_set(s) for s in reset_sets} if reset_sets else None
+        raw_reset = (
+            {s: repo.load_cycles_for_reset_set(s) for s in reset_sets}
+            if reset_sets
+            else None
+        )
 
         # raw for leakage
-        raw_leakage = {s: repo.load_leakage_for_set(s) for s in leakage_sets} if leakage_sets else None
+        raw_leakage = (
+            {s: repo.load_leakage_for_set(s) for s in leakage_sets}
+            if leakage_sets
+            else None
+        )
 
         forming_v = repo.load_forming_voltage_global(cfg.electroforming_like)
         first_v_reset = repo.load_first_v_reset(cfg.endurance_reset_like)

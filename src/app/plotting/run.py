@@ -30,12 +30,16 @@ def _write_json(fig, out_path) -> None:
 def main() -> None:
     cfg = load_config()
     data = load_all(cfg)
-    leakage_df = getattr(data, 'leakage_df', None)
+    leakage_df = getattr(data, "leakage_df", None)
     stack_id = getattr(data, "stack_id", None)
     if stack_id is None:
         if data.sets:
             sample_path = Path(next(iter(data.sets)))
-            stack_id = sample_path.stem.split("_")[0] if "_" in sample_path.stem else sample_path.stem
+            stack_id = (
+                sample_path.stem.split("_")[0]
+                if "_" in sample_path.stem
+                else sample_path.stem
+            )
             print(f"Info: Inferred stack_id from sets: {stack_id}")
         else:
             stack_id = "Unknown"
@@ -48,7 +52,7 @@ def main() -> None:
             path = Path(s)
             stem = path.stem
             if stem.startswith(f"{stack_id}_"):
-                remainder = stem[len(stack_id) + 1:]
+                remainder = stem[len(stack_id) + 1 :]
                 if "_" in remainder:
                     device = remainder.split("_")[0]
                 else:
