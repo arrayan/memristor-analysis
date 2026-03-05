@@ -14,7 +14,6 @@ def _cdf_xy(values: pd.Series, is_log: bool) -> tuple[np.ndarray, np.ndarray]:
     v = pd.to_numeric(values, errors="coerce").dropna()
 
     if is_log:
-        # Log scale requirements: Absolute magnitude and > 0
         v = v.abs()
         v = v[v > 0]
 
@@ -31,8 +30,8 @@ def _cdf_xy(values: pd.Series, is_log: bool) -> tuple[np.ndarray, np.ndarray]:
 def build_cdf_figs(cdf_table: "pd.DataFrame", sets: list[str]) -> list[go.Figure]:
     """
     Creates a list of CDF Figure objects, one for each parameter.
-    Selectively applies Log or Linear scales based on the parameter type.
-    Forces at least two log magnitudes to be visible for log scales.
+    Each figure shows individual curves per source file PLUS a unified
+    'All Data' curve aggregating all sets into one dataset.
     """
     if not has_valid_data(cdf_table, sets):
         return []
@@ -44,12 +43,12 @@ def build_cdf_figs(cdf_table: "pd.DataFrame", sets: list[str]) -> list[go.Figure
         "R_HRS": {"pretty": "R_HRS (Ω)", "scale": "log"},
         "I_reset_max": {"pretty": "I_reset_max (A)", "scale": "log"},
         "V_forming": {"pretty": "V_forming (V)", "scale": "linear"},
+        "I_leakage_pristine": {"pretty": "I_leakage pristine (A)", "scale": "log"},
     }
 
     cols = px.colors.sample_colorscale("Viridis", max(len(sets), 2))
     color_map = {s: cols[i] for i, s in enumerate(sets)}
 
-    # Generate major log ticks only (10^n)
     tick_vals = [10.0**i for i in range(-15, 16)]
     tick_text = [f"1e{i}" if i != 0 else "1" for i in range(-15, 16)]
 
@@ -62,10 +61,9 @@ def build_cdf_figs(cdf_table: "pd.DataFrame", sets: list[str]) -> list[go.Figure
         fig = go.Figure()
         is_log = info["scale"] == "log"
         has_any_data = False
-
-        # Accumulate all x values for this plot to calculate range later
         all_x_vals = []
 
+        # Individual curves per source file
         for s in sets:
             df_s = cdf_table[cdf_table["source_file"] == s]
             x, y = _cdf_xy(df_s[param], is_log=is_log)
@@ -80,12 +78,30 @@ def build_cdf_figs(cdf_table: "pd.DataFrame", sets: list[str]) -> list[go.Figure
                         mode="lines+markers",
                         name=s,
                         marker=dict(size=4),
-                        line=dict(color=color_map.get(s), width=2),
+                        line=dict(color=color_map.get(s), width=1.5),
+                        opacity=0.6,
+                        legendgroup="individual",
                         hovertemplate="%{x}<br>%{y:.1f}%<extra></extra>",
                     )
                 )
 
-        # X-Axis Configuration
+        # Unified "All Data" curve — all sets combined into one dataset
+        x_all, y_all = _cdf_xy(cdf_table[param], is_log=is_log)
+        if x_all.size > 0:
+            has_any_data = True
+            all_x_vals.extend(x_all)
+            fig.add_trace(
+                go.Scatter(
+                    x=x_all,
+                    y=y_all,
+                    mode="lines",
+                    name="All Data (unified)",
+                    line=dict(color="black", width=2.5),
+                    legendgroup="unified",
+                    hovertemplate="All<br>%{x}<br>%{y:.1f}%<extra></extra>",
+                )
+            )
+
         if is_log:
             xaxis_kwargs = dict(
                 type="log",
@@ -97,27 +113,21 @@ def build_cdf_figs(cdf_table: "pd.DataFrame", sets: list[str]) -> list[go.Figure
                 showgrid=True,
                 gridcolor="#E5E5E5",
                 zeroline=False,
-                minor=dict(showgrid=False),  # Hide the default .5 lines
+                minor=dict(showgrid=False),
             )
 
-            # FORCE RANGE LOGIC: Ensure at least two magnitudes are visible
             if all_x_vals:
                 lmin = np.log10(min(all_x_vals))
                 lmax = np.log10(max(all_x_vals))
-
-                # If span is less than 1.0 (one decade), force it to ~1.1
                 if (lmax - lmin) < 1.0:
                     mid = (lmin + lmax) / 2
                     xaxis_kwargs["range"] = [mid - 0.55, mid + 0.55]
                 else:
-                    # Normal padding in log space
                     pad = (lmax - lmin) * 0.05
                     xaxis_kwargs["range"] = [lmin - pad, lmax + pad]
 
             fig.update_xaxes(**xaxis_kwargs)
-
         else:
-            # Linear Scale Configuration
             fig.update_xaxes(
                 type="linear",
                 title_text=info["pretty"],
@@ -128,7 +138,6 @@ def build_cdf_figs(cdf_table: "pd.DataFrame", sets: list[str]) -> list[go.Figure
                 autorange=True,
             )
 
-        # Y-Axis Configuration
         fig.update_yaxes(
             title_text="Probability (%)",
             range=[-2, 102],

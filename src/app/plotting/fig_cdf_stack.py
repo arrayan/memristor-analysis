@@ -11,7 +11,8 @@ def build_stack_level_cdf_figs(
     cdf_table: "pd.DataFrame", stack_id: str, devices: list[str]
 ) -> list[go.Figure]:
     """
-    Stack-Level CDFs: Every device aggregates all his endurance sets.
+    Stack-Level CDFs: one curve per device (aggregated) PLUS a unified
+    'All Devices' curve combining the entire stack into one dataset.
     """
     if not has_valid_data(cdf_table, devices):
         return []
@@ -23,6 +24,7 @@ def build_stack_level_cdf_figs(
         "R_HRS": {"pretty": "R_HRS (Ω)", "scale": "log"},
         "I_reset_max": {"pretty": "I_reset_max (A)", "scale": "log"},
         "V_forming": {"pretty": "V_forming (V)", "scale": "linear"},
+        "I_leakage_pristine": {"pretty": "I_leakage pristine (A)", "scale": "log"},
     }
 
     cols = px.colors.sample_colorscale("Viridis", max(len(devices), 2))
@@ -42,10 +44,9 @@ def build_stack_level_cdf_figs(
         has_any_data = False
         all_x_vals = []
 
+        # One curve per device (aggregated across all its sets)
         for device in devices:
             device_sets = find_device_sets(cdf_table, device)
-
-            # aggregate
             df_device = cdf_table[cdf_table["source_file"].isin(device_sets)]
             x, y = _cdf_xy(df_device[param], is_log=is_log)
 
@@ -60,9 +61,28 @@ def build_stack_level_cdf_figs(
                         name=device,
                         marker=dict(size=4),
                         line=dict(color=color_map.get(device), width=2),
+                        opacity=0.8,
+                        legendgroup="devices",
                         hovertemplate="%{x}<br>%{y:.1f}%<extra></extra>",
                     )
                 )
+
+        # Unified "All Devices" curve — entire stack as one dataset
+        x_all, y_all = _cdf_xy(cdf_table[param], is_log=is_log)
+        if x_all.size > 0:
+            has_any_data = True
+            all_x_vals.extend(x_all)
+            fig.add_trace(
+                go.Scatter(
+                    x=x_all,
+                    y=y_all,
+                    mode="lines",
+                    name="All Devices (unified)",
+                    line=dict(color="black", width=2.5),
+                    legendgroup="unified",
+                    hovertemplate="All<br>%{x}<br>%{y:.1f}%<extra></extra>",
+                )
+            )
 
         if is_log:
             xaxis_kwargs = dict(
@@ -81,7 +101,6 @@ def build_stack_level_cdf_figs(
             if all_x_vals:
                 lmin = np.log10(min(all_x_vals))
                 lmax = np.log10(max(all_x_vals))
-
                 if (lmax - lmin) < 1.0:
                     mid = (lmin + lmax) / 2
                     xaxis_kwargs["range"] = [mid - 0.55, mid + 0.55]
