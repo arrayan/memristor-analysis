@@ -30,6 +30,7 @@ def _write_json(fig, out_path) -> None:
 def main() -> None:
     cfg = load_config()
     data = load_all(cfg)
+    leakage_df = getattr(data, 'leakage_df', None)
     stack_id = getattr(data, "stack_id", None)
     if stack_id is None:
         if data.sets:
@@ -66,7 +67,11 @@ def main() -> None:
         char_dir.mkdir(parents=True, exist_ok=True)
 
         # Generate and Save
-        char_figs = build_characteristic_figs(data.raw_characteristic, data.sets)
+        char_figs = build_characteristic_figs(
+            data.raw_characteristic,
+            data.sets,
+            raw_reset_by_set=data.raw_reset,
+        )
         for fig in char_figs:
             pid = fig.layout.meta.get("param_id")
             # Save as AI.html and NORM_COND.html as well as JSON for export
@@ -100,6 +105,7 @@ def main() -> None:
             cdf_table=data.cdf_table,
             stack_id=stack_id,
             devices=devices,
+            leakage_df=leakage_df,
         )
 
         for fig in stack_cdf_figs:
@@ -133,6 +139,7 @@ def main() -> None:
             box_table=data.box_table,
             stack_id=stack_id,
             devices=devices,
+            leakage_df=data.leakage_df,
         )
 
         for fig in stack_figs:
@@ -177,6 +184,9 @@ def main() -> None:
             scatter_df=data.scatter_df,
             stack_id=stack_id,
             devices=devices,
+            leakage_df=data.leakage_df,
+            forming_v=data.forming_v,
+            first_v_reset=data.first_v_reset,
         )
 
         for fig in stack_corr_figs:

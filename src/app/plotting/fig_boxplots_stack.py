@@ -3,19 +3,49 @@ import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 import plotly.express as px
-from .utils import has_valid_data
+from .utils import has_valid_data, find_device_sets
+
+
+def _prepare_leakage_data(leakage_df: pd.DataFrame | None) -> pd.DataFrame:
+    """
+    Prep. leakage data and calc. R_prestine
+    """
+    if leakage_df is None or leakage_df.empty:
+        return pd.DataFrame()
+
+    df = leakage_df.copy()
+
+    # I_leakage from AI
+    if "AI" in df.columns:
+        df["I_leakage"] = pd.to_numeric(df["AI"], errors="coerce").abs()
+
+    # R_pristine = V / I_leakage
+    if "AV" in df.columns and "I_leakage" in df.columns:
+        v = pd.to_numeric(df["AV"], errors="coerce")
+        i = df["I_leakage"]
+        df["R_pristine"] = np.where(
+            (v.notna()) & (i.notna()) & (i > 0),
+            v / i,
+            np.nan
+        )
+
+    return df
 
 
 def build_stack_level_boxplots(
-    box_table: pd.DataFrame, stack_id: str, devices: list[str]
+        box_table: pd.DataFrame,
+        stack_id: str,
+        devices: list[str],
+        leakage_df: pd.DataFrame | None = None,
 ) -> list[go.Figure]:
     """
     Stack-Level Boxplots: every device
+    Includes I_leakage and R_pristine if leakage data provided.
     """
     if not has_valid_data(box_table, devices):
         return []
 
-    # param map:
+    # param_map
     param_map = {
         "VSET": {"pretty": "V_set (V)", "scale": "linear"},
         "V_reset": {"pretty": "V_reset (V)", "scale": "linear"},
@@ -25,17 +55,32 @@ def build_stack_level_boxplots(
         "V_forming": {"pretty": "V_forming (V)", "scale": "linear"},
     }
 
+    prepared_leakage = _prepare_leakage_data(leakage_df)
+
+    # append to param_map
+    if not prepared_leakage.empty:
+        if "I_leakage" in prepared_leakage.columns:
+            param_map["I_leakage"] = {"pretty": "I_leakage (A)", "scale": "log"}
+        if "R_pristine" in prepared_leakage.columns:
+            param_map["R_pristine"] = {"pretty": "R_pristine (Ω)", "scale": "log"}
+
     cols = px.colors.sample_colorscale("Viridis", max(len(devices), 2))
     color_map = {d: cols[i] for i, d in enumerate(devices)}
 
-    # Log-Scale
-    tick_vals = [10.0**i for i in range(-15, 16)]
+    tick_vals = [10.0 ** i for i in range(-15, 16)]
     tick_text = [f"1e{i}" if i != 0 else "1" for i in range(-15, 16)]
 
     figures = []
 
     for param, info in param_map.items():
-        if param not in box_table.columns:
+        if param in ["I_leakage", "R_pristine"]:
+            if prepared_leakage.empty:
+                continue
+            data_source = prepared_leakage
+        else:
+            data_source = box_table
+
+        if param not in data_source.columns:
             continue
 
         fig = go.Figure()
@@ -44,22 +89,10 @@ def build_stack_level_boxplots(
         all_vals_for_param = []
 
         for device in devices:
-            # find all sets
-            device_pattern = f"_{device}_"
-            device_sets = [
-                s
-                for s in box_table["source_file"].unique()
-                if device_pattern in s or s.endswith(f"_{device}")
-            ]
-
-            # fallback: prefix matching
-            if not device_sets:
-                device_sets = [
-                    s for s in box_table["source_file"].unique() if device in s
-                ]
+            device_sets = find_device_sets(data_source, device)
 
             # aggregation
-            df_device = box_table[box_table["source_file"].isin(device_sets)]
+            df_device = data_source[data_source["source_file"].isin(device_sets)]
             vals = pd.to_numeric(df_device[param], errors="coerce").dropna()
 
             if is_log:
@@ -82,6 +115,9 @@ def build_stack_level_boxplots(
                     boxmean=False,
                 )
             )
+
+        if not has_any_data:
+            continue
 
         if is_log:
             yaxis_config = dict(
@@ -130,16 +166,6 @@ def build_stack_level_boxplots(
             boxmode="group",
             meta={"param_id": param, "level": "stack", "stack_id": stack_id},
         )
-
-        if not has_any_data:
-            fig.add_annotation(
-                text="No valid data found",
-                xref="paper",
-                yref="paper",
-                x=0.5,
-                y=0.5,
-                showarrow=False,
-            )
 
         figures.append(fig)
 

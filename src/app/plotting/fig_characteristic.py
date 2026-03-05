@@ -6,13 +6,15 @@ import plotly.express as px
 
 
 def build_characteristic_figs(
-    raw_by_set: dict[str, "pd.DataFrame"], sets: list[str]
+    raw_by_set: dict[str, "pd.DataFrame"],
+    sets: list[str],
+    raw_reset_by_set: "dict[str, pd.DataFrame] | None" = None,
 ) -> list[go.Figure]:
     """
     Creates three figures:
     1. AI (Current) vs AV - Log Scale
     2. NORM_COND (Conductance) vs AV - Linear Scale
-    3. Butterfly Curve - |I| vs V - true autoscale & vline = 0
+    3. Butterfly Curve - Set + Reset |I| vs V, all cycles overlaid
     """
     if not sets:
         return []
@@ -47,8 +49,9 @@ def build_characteristic_figs(
                     mode="lines",
                     line=dict(color=color, width=1.2),
                     opacity=0.5,
-                    name=s,
+                    name=f"Cycle {cyc}",
                     legendgroup=s,
+                    legendgrouptitle=dict(text=s) if idx == 0 else None,
                     showlegend=(idx == 0),
                     hovertemplate=f"Set: {s}<br>Cycle: {cyc}<br>V: %{{x}}V<br>I: %{{y}}<extra></extra>",
                 )
@@ -84,7 +87,7 @@ def build_characteristic_figs(
         width=1000,
         height=700,
         template="plotly_white",
-        legend=dict(groupclick="toggleitem", title="Files"),
+        legend=dict(groupclick="togglegroup", title="Files"),
         meta={"param_id": "AI"},
     )
     figures.append(fig1)
@@ -111,8 +114,9 @@ def build_characteristic_figs(
                     mode="lines",
                     line=dict(color=color, width=1.2),
                     opacity=0.5,
-                    name=s,
+                    name=f"Cycle {cyc}",
                     legendgroup=s,
+                    legendgrouptitle=dict(text=s) if idx == 0 else None,
                     showlegend=(idx == 0),
                     hovertemplate=f"Set: {s}<br>Cycle: {cyc}<br>V: %{{x}}V<br>Cond: %{{y}}<extra></extra>",
                 )
@@ -138,82 +142,138 @@ def build_characteristic_figs(
         width=1000,
         height=700,
         template="plotly_white",
-        legend=dict(groupclick="toggleitem", title="Files"),
+        legend=dict(groupclick="togglegroup", title="Files"),
         meta={"param_id": "NORM_COND"},
     )
     figures.append(fig2)
 
-    # BUTTERFLY CURVE
-    fig_butterfly = go.Figure()
-    all_i_vals = []
+    # BUTTERFLY CURVE – one plot per device, all endurance_set files aggregated.
+    # Set sweeps: solid lines. Reset sweeps: dashed lines. Same color per device.
 
+    def _extract_device(source_file: str) -> str:
+        """Extract device token (index 1) from {stack}_{device}_{nr}_{type}."""
+        parts = source_file.split("_")
+        return parts[1] if len(parts) >= 2 else source_file
+
+    # Group set files by device
+    device_set_files: dict[str, list[str]] = {}
     for s in sets:
-        df = raw_by_set[s]
-        cycles = df["cycle_number"].unique()
-        color = set_color_map[s]
+        dev = _extract_device(s)
+        device_set_files.setdefault(dev, []).append(s)
 
-        for idx, cyc in enumerate(cycles):
-            tiny = df[df["cycle_number"] == cyc]
+    # Group reset files by device
+    device_reset_files: dict[str, list[str]] = {}
+    if raw_reset_by_set:
+        for rf in raw_reset_by_set:
+            dev = _extract_device(rf)
+            device_reset_files.setdefault(dev, []).append(rf)
 
-            av = pd.to_numeric(tiny["AV"], errors="coerce")
-            ai = pd.to_numeric(tiny["AI"], errors="coerce").abs()
+    devices_sorted = sorted(device_set_files.keys())
+    dev_colors = px.colors.sample_colorscale("Viridis", max(len(devices_sorted), 2))
+    dev_color_map = {d: dev_colors[i] for i, d in enumerate(devices_sorted)}
 
-            valid = ai > 0
-            av_valid = av[valid]
-            ai_valid = ai[valid]
+    for device in devices_sorted:
+        fig_butterfly = go.Figure()
+        all_i_vals = []
+        color = dev_color_map[device]
+        first_set_trace = True
+        first_reset_trace = True
 
-            all_i_vals.extend(ai_valid.tolist())
+        # Set and reset files get distinct colors; same file = same color across cycles.
+        all_legend_files = (
+            device_set_files[device]
+            + device_reset_files.get(device, [])
+        )
+        file_colors = px.colors.qualitative.Plotly
+        file_color_map = {f: file_colors[i % len(file_colors)] for i, f in enumerate(all_legend_files)}
 
-            fig_butterfly.add_trace(
-                go.Scatter(
-                    x=av_valid,
-                    y=ai_valid,
-                    mode="lines",
-                    line=dict(color=color, width=1.2),
-                    opacity=0.5,
-                    name=s,
-                    legendgroup=s,
-                    showlegend=(idx == 0),
-                    hovertemplate=f"Set: {s}<br>Cycle: {cyc}<br>V: %{{x}}V<br>|I|: %{{y}}<extra></extra>",
+        # --- Set sweeps (all files for this device) ---
+        for s in device_set_files[device]:
+            df_set = raw_by_set[s]
+            for idx, cyc in enumerate(df_set["cycle_number"].unique()):
+                tiny = df_set[df_set["cycle_number"] == cyc]
+                av = pd.to_numeric(tiny["AV"], errors="coerce")
+                ai = pd.to_numeric(tiny["AI"], errors="coerce").abs()
+                valid = ai > 0
+                av_v, ai_v = av[valid], ai[valid]
+                all_i_vals.extend(ai_v.tolist())
+                fig_butterfly.add_trace(
+                    go.Scatter(
+                        x=av_v,
+                        y=ai_v,
+                        mode="lines",
+                        line=dict(color=file_color_map[s], width=1.2, dash="solid"),
+                        opacity=0.5,
+                        name=s,
+                        legendgroup=s,
+                        showlegend=(idx == 0),
+                        hovertemplate=f"Set: {s}<br>Cycle: {cyc}<br>V: %{{x:.3f}} V<br>|I|: %{{y}}<extra></extra>",
+                    )
                 )
-            )
 
-    yaxis_config_butterfly = dict(
-        type="log",
-        tickmode="array",
-        tickvals=tick_vals,
-        ticktext=tick_text,
-        exponentformat="power",
-        gridcolor="#E5E5E5",
-        minor=dict(showgrid=False),
-        title_text="|Imeas (A)|",
-    )
-    if all_i_vals:
-        lmin, lmax = np.log10(min(all_i_vals)), np.log10(max(all_i_vals))
-        if (lmax - lmin) < 1.0:
-            mid = (lmin + lmax) / 2
-            yaxis_config_butterfly["range"] = [mid - 0.55, mid + 0.55]
-    fig_butterfly.update_yaxes(**yaxis_config_butterfly)
+        # --- Reset sweeps (all files for this device) ---
+        for rf in device_reset_files.get(device, []):
+            df_reset = raw_reset_by_set[rf]
+            for idx, cyc in enumerate(df_reset["cycle_number"].unique()):
+                tiny = df_reset[df_reset["cycle_number"] == cyc]
+                av = pd.to_numeric(tiny["AV"], errors="coerce")
+                ai = pd.to_numeric(tiny["AI"], errors="coerce").abs()
+                valid = ai > 0
+                av_v, ai_v = av[valid], ai[valid]
+                all_i_vals.extend(ai_v.tolist())
+                fig_butterfly.add_trace(
+                    go.Scatter(
+                        x=av_v,
+                        y=ai_v,
+                        mode="lines",
+                        line=dict(color=file_color_map[rf], width=1.2, dash="dash"),
+                        opacity=0.5,
+                        name=rf,
+                        legendgroup=rf,
+                        showlegend=(idx == 0),
+                        hovertemplate=f"Reset: {rf}<br>Cycle: {cyc}<br>V: %{{x:.3f}} V<br>|I|: %{{y}}<extra></extra>",
+                    )
+                )
 
-    fig_butterfly.update_xaxes(
-        title_text="Vforce (V)",
-        gridcolor="#E5E5E5",
-        zeroline=True,
-        zerolinecolor="black",
-        zerolinewidth=2,
-        autorange=True,
-    )
+        yaxis_config_butterfly = dict(
+            type="log",
+            tickmode="array",
+            tickvals=tick_vals,
+            ticktext=tick_text,
+            exponentformat="power",
+            gridcolor="#E5E5E5",
+            minor=dict(showgrid=False),
+            title_text="|I| (A)",
+        )
+        if all_i_vals:
+            lmin, lmax = np.log10(min(all_i_vals)), np.log10(max(all_i_vals))
+            if (lmax - lmin) < 1.0:
+                mid = (lmin + lmax) / 2
+                yaxis_config_butterfly["range"] = [mid - 0.55, mid + 0.55]
+            else:
+                pad = (lmax - lmin) * 0.05
+                yaxis_config_butterfly["range"] = [lmin - pad, lmax + pad]
+        fig_butterfly.update_yaxes(**yaxis_config_butterfly)
 
-    fig_butterfly.add_vline(x=0, line_width=2, line_color="black")
+        fig_butterfly.update_xaxes(
+            title_text="V (V)",
+            gridcolor="#E5E5E5",
+            zeroline=True,
+            zerolinecolor="black",
+            zerolinewidth=2,
+            autorange=True,
+        )
 
-    fig_butterfly.update_layout(
-        title="Butterfly Curve – |I| vs V (All Sets)",
-        width=1000,
-        height=700,
-        template="plotly_white",
-        legend=dict(groupclick="toggleitem", title="Files"),
-        meta={"param_id": "butterfly_curve"},
-    )
-    figures.append(fig_butterfly)
+        fig_butterfly.add_vline(x=0, line_width=2, line_color="black")
+
+        fig_butterfly.update_layout(
+            title=f"Butterfly Curve – Device {device} | solid = Set, dashed = Reset",
+            width=1000,
+            height=700,
+            template="plotly_white",
+            legend=dict(groupclick="toggleitem", title="Files"),
+            meta={"param_id": f"butterfly_{device}"},
+        )
+        figures.append(fig_butterfly)
 
     return figures

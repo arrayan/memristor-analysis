@@ -12,6 +12,8 @@ class Config:
     # File name patterns
     endurance_set_like: str = "%endurance_set%"
     electroforming_like: str = "%electroforming%"
+    leakage_set_like: str = "%leakage%"
+    endurance_reset_like: str = "%endurance_reset%"
 
     # Output HTML files
     characteristic_html: str = "characteristic_plots.html"

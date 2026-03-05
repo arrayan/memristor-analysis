@@ -7,15 +7,45 @@ from .fig_cdf import _cdf_xy
 from .utils import has_valid_data, find_device_sets
 
 
+def _prepare_leakage_data(leakage_df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Prep. leakage data and calc. R_pristine
+    """
+    if leakage_df is None or leakage_df.empty:
+        return pd.DataFrame()
+
+    df = leakage_df.copy()
+
+    if "AI" in df.columns:
+        df["I_leakage"] = pd.to_numeric(df["AI"], errors="coerce").abs()
+
+    # R_pristine = V / I_leakage
+    if "AV" in df.columns and "I_leakage" in df.columns:
+        v = pd.to_numeric(df["AV"], errors="coerce")
+        i = df["I_leakage"]
+        df["R_pristine"] = np.where(
+            (v.notna()) & (i.notna()) & (i > 0),
+            v / i,
+            np.nan
+        )
+
+    return df
+
+
 def build_stack_level_cdf_figs(
-    cdf_table: "pd.DataFrame", stack_id: str, devices: list[str]
+        cdf_table: "pd.DataFrame",
+        stack_id: str,
+        devices: list[str],
+        leakage_df: "pd.DataFrame | None" = None,
 ) -> list[go.Figure]:
     """
     Stack-Level CDFs: Every device aggregates all his endurance sets.
+    Includes I_leakage and R_pristine if leakage data provided.
     """
     if not has_valid_data(cdf_table, devices):
         return []
 
+    # param_map
     param_map = {
         "VSET": {"pretty": "V_set (V)", "scale": "linear"},
         "V_reset": {"pretty": "V_reset (V)", "scale": "linear"},
@@ -25,16 +55,33 @@ def build_stack_level_cdf_figs(
         "V_forming": {"pretty": "V_forming (V)", "scale": "linear"},
     }
 
+    prepared_leakage = _prepare_leakage_data(leakage_df)
+
+    # append leakage data to param_map
+    if not prepared_leakage.empty:
+        if "I_leakage" in prepared_leakage.columns:
+            param_map["I_leakage"] = {"pretty": "I_leakage (A)", "scale": "log"}
+        if "R_pristine" in prepared_leakage.columns:
+            param_map["R_pristine"] = {"pretty": "R_pristine (Ω)", "scale": "log"}
+
     cols = px.colors.sample_colorscale("Viridis", max(len(devices), 2))
     color_map = {d: cols[i] for i, d in enumerate(devices)}
 
-    tick_vals = [10.0**i for i in range(-15, 16)]
+    tick_vals = [10.0 ** i for i in range(-15, 16)]
     tick_text = [f"1e{i}" if i != 0 else "1" for i in range(-15, 16)]
 
     figures = []
 
     for param, info in param_map.items():
-        if param not in cdf_table.columns:
+        if param in ["I_leakage", "R_pristine"]:
+            if prepared_leakage.empty:
+                continue
+            data_source = prepared_leakage
+        else:
+            data_source = cdf_table
+
+        if param not in data_source.columns:
+            print(f"Debug: Parameter {param} nicht in Datenquelle")
             continue
 
         fig = go.Figure()
@@ -43,10 +90,18 @@ def build_stack_level_cdf_figs(
         all_x_vals = []
 
         for device in devices:
-            device_sets = find_device_sets(cdf_table, device)
+            device_sets = find_device_sets(data_source, device)
+
+            if not device_sets:
+                print(f"Debug: Keine Sets für Device {device}")
+                continue
 
             # aggregate
-            df_device = cdf_table[cdf_table["source_file"].isin(device_sets)]
+            df_device = data_source[data_source["source_file"].isin(device_sets)]
+
+            if df_device.empty:
+                continue
+
             x, y = _cdf_xy(df_device[param], is_log=is_log)
 
             if x.size > 0:
@@ -63,6 +118,10 @@ def build_stack_level_cdf_figs(
                         hovertemplate="%{x}<br>%{y:.1f}%<extra></extra>",
                     )
                 )
+
+        if not has_any_data:
+            print(f"Debug: Keine Daten für Parameter {param}")
+            continue
 
         if is_log:
             xaxis_kwargs = dict(
@@ -117,17 +176,8 @@ def build_stack_level_cdf_figs(
             meta={"param_id": param, "level": "stack", "stack_id": stack_id},
         )
 
-        if not has_any_data:
-            fig.add_annotation(
-                text="No valid data found for this scale type",
-                xref="paper",
-                yref="paper",
-                x=0.5,
-                y=0.5,
-                showarrow=False,
-                font=dict(color="red", size=14),
-            )
-
         figures.append(fig)
+        print(f"Debug: Figur für {param} erstellt")
 
+    print(f"Debug: Insgesamt {len(figures)} Figuren erstellt")
     return figures
