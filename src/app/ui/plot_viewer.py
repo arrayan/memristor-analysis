@@ -4,6 +4,9 @@ from PySide6.QtCore import QUrl
 from pathlib import Path
 import plotly.io as pio
 import os
+from svglib.svglib import svg2rlg
+from reportlab.graphics import renderPS
+import tempfile
 
 
 class PlotViewer(QWidget):
@@ -53,10 +56,36 @@ class PlotViewer(QWidget):
     def export_image(self, out_path: str, fmt: str) -> bool:
         fmt = fmt.lower().strip()
 
-        # in case of a live figure
         if self.figure is not None:
-            self.figure.write_image(out_path, format=fmt)
-            return True
+            if fmt == "eps":
+                with tempfile.NamedTemporaryFile(suffix=".svg", delete=False) as tmp:
+                    svg_path = tmp.name
+                try:
+                    self.figure.write_image(svg_path, format="svg")
+
+                    drawing = svg2rlg(svg_path)
+                    if drawing is None:
+                        print("EPS export failed: SVG parsing returned None")
+                        return False
+
+                    renderPS.drawToFile(drawing, out_path)
+                    return True
+
+                except Exception as e:
+                    print(f"EPS export error: {e}")
+                    return False
+
+                finally:
+                    if os.path.exists(svg_path):
+                        os.remove(svg_path)
+
+            # Non-EPS live figure
+            try:
+                self.figure.write_image(out_path, format=fmt)
+                return True
+            except Exception as e:
+                print(f"Export error: {e}")
+                return False
 
         # Otherwise export from sidecar JSON next to the loaded HTML
         if not self.html_path:
@@ -67,5 +96,29 @@ class PlotViewer(QWidget):
             return False
 
         fig = pio.from_json(json_path.read_text(encoding="utf-8"))
+
+        if fmt == "eps":
+            with tempfile.NamedTemporaryFile(suffix=".svg", delete=False) as tmp:
+                svg_path = tmp.name
+            try:
+                fig.write_image(svg_path, format="svg")
+
+                drawing = svg2rlg(svg_path)
+                if drawing is None:
+                    print("EPS export failed: SVG parsing returned None")
+                    return False
+
+                renderPS.drawToFile(drawing, out_path)
+                return True
+
+            except Exception as e:
+                print(f"EPS export error: {e}")
+                return False
+
+            finally:
+                if os.path.exists(svg_path):
+                    os.remove(svg_path)
+
+        # Normal formats (PNG/SVG/PDF)
         fig.write_image(out_path, format=fmt)
         return True
