@@ -3,19 +3,19 @@ import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 import plotly.express as px
-from .utils import has_valid_data
+from .utils import has_valid_data, find_device_sets
 
 
 def build_stack_level_boxplots(
     box_table: pd.DataFrame, stack_id: str, devices: list[str]
 ) -> list[go.Figure]:
     """
-    Stack-Level Boxplots: every device
+    Stack-Level Boxplots: one box per device (aggregated) PLUS a unified
+    'All Devices' box combining the entire stack into one dataset.
     """
     if not has_valid_data(box_table, devices):
         return []
 
-    # param map:
     param_map = {
         "VSET": {"pretty": "V_set (V)", "scale": "linear"},
         "V_reset": {"pretty": "V_reset (V)", "scale": "linear"},
@@ -23,12 +23,12 @@ def build_stack_level_boxplots(
         "R_HRS": {"pretty": "R_HRS (Ω)", "scale": "log"},
         "I_reset_max": {"pretty": "I_reset_max (A)", "scale": "log"},
         "V_forming": {"pretty": "V_forming (V)", "scale": "linear"},
+        "I_leakage_pristine": {"pretty": "I_leakage pristine (A)", "scale": "log"},
     }
 
     cols = px.colors.sample_colorscale("Viridis", max(len(devices), 2))
     color_map = {d: cols[i] for i, d in enumerate(devices)}
 
-    # Log-Scale
     tick_vals = [10.0**i for i in range(-15, 16)]
     tick_text = [f"1e{i}" if i != 0 else "1" for i in range(-15, 16)]
 
@@ -43,22 +43,9 @@ def build_stack_level_boxplots(
         has_any_data = False
         all_vals_for_param = []
 
+        # One box per device (aggregated across all its sets)
         for device in devices:
-            # find all sets
-            device_pattern = f"_{device}_"
-            device_sets = [
-                s
-                for s in box_table["source_file"].unique()
-                if device_pattern in s or s.endswith(f"_{device}")
-            ]
-
-            # fallback: prefix matching
-            if not device_sets:
-                device_sets = [
-                    s for s in box_table["source_file"].unique() if device in s
-                ]
-
-            # aggregation
+            device_sets = find_device_sets(box_table, device)
             df_device = box_table[box_table["source_file"].isin(device_sets)]
             vals = pd.to_numeric(df_device[param], errors="coerce").dropna()
 
@@ -80,6 +67,29 @@ def build_stack_level_boxplots(
                     opacity=0.7,
                     boxpoints=False,
                     boxmean=False,
+                    legendgroup="devices",
+                )
+            )
+
+        # Unified "All Devices" box — entire stack as one dataset
+        all_vals = pd.to_numeric(box_table[param], errors="coerce").dropna()
+        if is_log:
+            all_vals = all_vals.abs()
+            all_vals = all_vals[all_vals > 0]
+
+        if not all_vals.empty:
+            has_any_data = True
+            all_vals_for_param.extend(all_vals.tolist())
+            fig.add_trace(
+                go.Box(
+                    y=all_vals,
+                    name="All Devices (unified)",
+                    marker_color="black",
+                    line=dict(width=2.5, color="black"),
+                    fillcolor="rgba(0,0,0,0.15)",
+                    boxpoints=False,
+                    boxmean=False,
+                    legendgroup="unified",
                 )
             )
 
@@ -100,7 +110,6 @@ def build_stack_level_boxplots(
             if all_vals_for_param:
                 lmin = np.log10(min(all_vals_for_param))
                 lmax = np.log10(max(all_vals_for_param))
-
                 if (lmax - lmin) < 1.0:
                     mid = (lmin + lmax) / 2
                     yaxis_config["range"] = [mid - 0.55, mid + 0.55]

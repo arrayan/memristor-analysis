@@ -4,31 +4,47 @@ import pandas as pd
 import plotly.graph_objects as go
 import plotly.express as px
 
+# G0: conductance quantum in Siemens
+G0 = 7.748e-5
+
 
 def build_characteristic_figs(
-    raw_by_set: dict[str, "pd.DataFrame"], sets: list[str]
+    raw_by_set: dict[str, "pd.DataFrame"],
+    sets: list[str],
+    raw_by_reset: dict[str, "pd.DataFrame"] | None = None,
 ) -> list[go.Figure]:
     """
     Creates three figures:
-    1. AI (Current) vs AV - Log Scale
-    2. NORM_COND (Conductance) vs AV - Linear Scale
+    1. AI (Current) vs AV - Log Scale - includes both set AND reset data
+    2. NORM_COND (Normalized Conductance G/G0) vs AV - Linear Scale
     3. Butterfly Curve - |I| vs V - true autoscale & vline = 0
     """
     if not sets:
         return []
 
+    if raw_by_reset is None:
+        raw_by_reset = {}
+
     base_cols = px.colors.qualitative.Plotly
     set_color_map = {s: base_cols[i % len(base_cols)] for i, s in enumerate(sets)}
+
+    # Use a different color palette offset for reset files so they're visually distinct
+    all_reset_keys = list(raw_by_reset.keys())
+    reset_color_map = {
+        s: base_cols[(i + len(sets)) % len(base_cols)]
+        for i, s in enumerate(all_reset_keys)
+    }
 
     tick_vals = [10.0**i for i in range(-15, 1)]
     tick_text = [f"1e{i}" if i != 0 else "1" for i in range(-15, 1)]
 
     figures = []
 
-    # AI vs AV
+    # ── Fig 1: |Current| vs V (set + reset) ────────────────────────────────
     fig1 = go.Figure()
     all_y_vals_1 = []
 
+    # Set data
     for s in sets:
         df = raw_by_set[s]
         cycles = df["cycle_number"].unique()
@@ -36,7 +52,6 @@ def build_characteristic_figs(
 
         for idx, cyc in enumerate(cycles):
             tiny = df[df["cycle_number"] == cyc]
-
             y_vals = pd.to_numeric(tiny["AI"], errors="coerce").abs()
             all_y_vals_1.extend(y_vals[y_vals > 0].tolist())
 
@@ -47,16 +62,42 @@ def build_characteristic_figs(
                     mode="lines",
                     line=dict(color=color, width=1.2),
                     opacity=0.5,
-                    name=s,
+                    name=f"{s} (set)",
                     legendgroup=s,
                     showlegend=(idx == 0),
                     hovertemplate=f"Set: {s}<br>Cycle: {cyc}<br>V: %{{x}}V<br>I: %{{y}}<extra></extra>",
                 )
             )
 
+    # Reset data
+    for s, df_reset in raw_by_reset.items():
+        if df_reset.empty:
+            continue
+        cycles = df_reset["cycle_number"].unique()
+        color = reset_color_map.get(s, "#888888")
+
+        for idx, cyc in enumerate(cycles):
+            tiny = df_reset[df_reset["cycle_number"] == cyc]
+            y_vals = pd.to_numeric(tiny["AI"], errors="coerce").abs()
+            all_y_vals_1.extend(y_vals[y_vals > 0].tolist())
+
+            fig1.add_trace(
+                go.Scatter(
+                    x=tiny["AV"],
+                    y=y_vals,
+                    mode="lines",
+                    line=dict(color=color, width=1.2, dash="dot"),
+                    opacity=0.5,
+                    name=f"{s} (reset)",
+                    legendgroup=f"{s}_reset",
+                    showlegend=(idx == 0),
+                    hovertemplate=f"Reset: {s}<br>Cycle: {cyc}<br>V: %{{x}}V<br>I: %{{y}}<extra></extra>",
+                )
+            )
+
     fig1.update_xaxes(
         title_text="AV (V)",
-        autorange="reversed",
+        autorange=True,
         gridcolor="#E5E5E5",
         zeroline=True,
         zerolinecolor="gray",
@@ -80,7 +121,7 @@ def build_characteristic_figs(
     fig1.update_yaxes(**yaxis_config_1)
 
     fig1.update_layout(
-        title="Characteristic Plot – |Current| vs V (All Sets)",
+        title="Characteristic Plot – |Current| vs V (Set + Reset)",
         width=1000,
         height=700,
         template="plotly_white",
@@ -89,9 +130,8 @@ def build_characteristic_figs(
     )
     figures.append(fig1)
 
-    # NORM_COND vs AV
+    # ── Fig 2: Normalized Conductance (G/G0) vs AV ─────────────────────────
     fig2 = go.Figure()
-    all_y_vals_2 = []
 
     for s in sets:
         df = raw_by_set[s]
@@ -101,8 +141,8 @@ def build_characteristic_figs(
         for idx, cyc in enumerate(cycles):
             tiny = df[df["cycle_number"] == cyc]
 
-            y_vals = pd.to_numeric(tiny["NORM_COND"], errors="coerce")
-            all_y_vals_2.extend(y_vals.dropna().tolist())
+            # Normalize conductance by G0
+            y_vals = pd.to_numeric(tiny["NORM_COND"], errors="coerce") / G0
 
             fig2.add_trace(
                 go.Scatter(
@@ -114,7 +154,7 @@ def build_characteristic_figs(
                     name=s,
                     legendgroup=s,
                     showlegend=(idx == 0),
-                    hovertemplate=f"Set: {s}<br>Cycle: {cyc}<br>V: %{{x}}V<br>Cond: %{{y}}<extra></extra>",
+                    hovertemplate=f"Set: {s}<br>Cycle: {cyc}<br>V: %{{x}}V<br>G/G₀: %{{y:.3f}}<extra></extra>",
                 )
             )
 
@@ -127,14 +167,14 @@ def build_characteristic_figs(
     )
     fig2.update_yaxes(
         type="linear",
-        title_text="Conductance (S)",
+        title_text="G/G₀",
         gridcolor="#E5E5E5",
         zeroline=True,
         zerolinecolor="gray",
         autorange=True,
     )
     fig2.update_layout(
-        title="Characteristic Plot – Conductance vs V (All Sets)",
+        title="Characteristic Plot – Normalized Conductance (G/G₀) vs V",
         width=1000,
         height=700,
         template="plotly_white",
@@ -143,7 +183,7 @@ def build_characteristic_figs(
     )
     figures.append(fig2)
 
-    # BUTTERFLY CURVE
+    # ── Fig 3: Butterfly Curve ──────────────────────────────────────────────
     fig_butterfly = go.Figure()
     all_i_vals = []
 
