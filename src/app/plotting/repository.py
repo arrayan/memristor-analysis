@@ -14,7 +14,7 @@ class MemristorRepository:
 
     conn: duckdb.DuckDBPyConnection
 
-    def list_endurance_sets(self, endurance_like: str = "%endurance set%") -> list[str]:
+    def list_endurance_sets(self, endurance_like: str = "%endurance_set%") -> list[str]:
         rows = self.conn.execute(
             """
             SELECT DISTINCT source_file
@@ -27,7 +27,7 @@ class MemristorRepository:
         return [r[0] for r in rows]
 
     def list_endurance_resets(
-        self, endurance_reset_like: str = "%endurance reset%"
+        self, endurance_reset_like: str = "%endurance_reset%"
     ) -> list[str]:
         rows = self.conn.execute(
             """
@@ -85,7 +85,7 @@ class MemristorRepository:
     def load_forming_voltage_per_device(
         self,
         devices: list[str],
-        electroforming_like: str = "%Electroforming%",
+        electroforming_like: str = "%electroforming%",
     ) -> dict[str, float]:
         """
         Per-device forming voltage: MAX(VFORM) from each device's forming file.
@@ -97,8 +97,8 @@ class MemristorRepository:
                 """
                 SELECT MAX(VFORM) AS vf
                 FROM cycles
-                WHERE source_file LIKE ?
-                  AND source_file LIKE ?
+                WHERE source_file ILIKE ?
+                  AND source_file ILIKE ?
                 """,
                 [electroforming_like, f"%{device}%"],
             ).df()
@@ -123,8 +123,8 @@ class MemristorRepository:
                 """
                 SELECT MAX(ABS(AI)) AS il
                 FROM cycles
-                WHERE source_file LIKE ?
-                  AND source_file LIKE ?
+                WHERE source_file ILIKE ?
+                  AND source_file ILIKE ?
                 """,
                 [leakage_like, f"%{device}%"],
             ).df()
@@ -135,7 +135,7 @@ class MemristorRepository:
         return result
 
     def load_forming_voltage_global(
-        self, electroforming_like: str = "%Electroforming%"
+        self, electroforming_like: str = "%electroforming%"
     ) -> float | None:
         df = self.conn.execute(
             """

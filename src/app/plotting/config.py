@@ -12,7 +12,7 @@ class Config:
     # File name patterns
     endurance_set_like: str = "%endurance_set%"
     endurance_reset_like: str = "%endurance_reset%"
-    electroforming_like: str = "%Electroforming%"
+    electroforming_like: str = "%electroforming%"
     leakage_like: str = "%leakage%"
 
     # Output HTML files
