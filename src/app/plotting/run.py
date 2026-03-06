@@ -29,6 +29,23 @@ def _write_json(fig, out_path) -> None:
 def main() -> None:
     cfg = load_config()
     data = load_all(cfg)
+    print(
+        data.end_df[["source_file", "cycle_number", "V_reset", "I_reset_max"]].head(20)
+    )
+    print([k for k in data.raw_reset.keys() if "B12_04" in k])
+    print("reset keys:", list(data.raw_reset.keys())[:3])
+    print("set keys:", list(data.raw_endurance.keys())[:3])
+    print(data.scatter_df[["source_file", "V_reset", "I_reset_max"]].head(10))
+    print(
+        data.scatter_df["V_reset"].isna().sum(),
+        "NaN V_reset out of",
+        len(data.scatter_df),
+    )
+    print(
+        data.scatter_df[
+            data.scatter_df["source_file"] == "H25098_B12_04_endurance_set"
+        ][["V_reset", "I_reset_max"]].describe()
+    )
     # debug print to verify data loading and structure
     # print(data.leakage_i_by_device)
 

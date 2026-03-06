@@ -73,12 +73,15 @@ def build_cdf_table(
     parts_i = []
 
     for s, df_reset in raw_by_reset.items():
+        # Map reset filename back to set filename so the merge on source_file matches classic_df
+        set_key = s.replace("endurance_reset", "endurance_set")
+
         v = compute_v_reset(df_reset)
-        v["source_file"] = s
+        v["source_file"] = set_key
         parts_v.append(v)
 
         i = compute_i_reset_max(df_reset)
-        i["source_file"] = s
+        i["source_file"] = set_key
         parts_i.append(i)
 
     vreset_df = (
