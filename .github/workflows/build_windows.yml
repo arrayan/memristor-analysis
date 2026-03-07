@@ -55,3 +55,30 @@ jobs:
           name: MemristorAnalysisTool-Windows-Build
           path: MemristorAnalysisTool_Windows.zip
           retention-days: 5
+
+      - name: Run Smoke Test
+        shell: pwsh
+        run: |
+          Write-Host "Starting Built Executable for Smoke Test..."
+          
+          # 1. Start the process in the background
+          # We use the --smoke-test flag we just added
+          $exePath = "dist\MemristorAnalysisTool\MemristorAnalysisTool.exe"
+          
+          # Run the EXE and capture output
+          $process = Start-Process -FilePath $exePath -ArgumentList "--smoke-test" -PassThru -NoNewWindow -ErrorAction Stop
+          
+          # 2. Wait a few seconds to see if it stays alive or crashes
+          Start-Sleep -Seconds 10
+          
+          if ($process.HasExited) {
+              if ($process.ExitCode -ne 0) {
+                  Write-Error "SMOKE TEST FAILED: Application crashed with exit code $($process.ExitCode)"
+                  exit 1
+              } else {
+                  Write-Host "Smoke Test Passed: Application initialized and exited cleanly."
+              }
+          } else {
+              Write-Host "Smoke Test Passed: Application is running (forcing shutdown now)."
+              Stop-Process -Id $process.Id -Force
+          }
