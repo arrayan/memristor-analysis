@@ -1,5 +1,6 @@
 import sys
 import os
+import argparse
 import PySide6.QtWidgets as qt
 from src.app.ui import MainWindow
 
