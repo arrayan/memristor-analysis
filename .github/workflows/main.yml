@@ -1,0 +1,50 @@
+name: Build Windows Executable
+
+on:
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip' # caching pip dependencies to speed up future runs
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip setuptools wheel
+          # Install your requirements if you have a requirements.txt
+          if (Test-Path requirements.txt) { pip install -r requirements.txt }
+          # Ensure build tools are present
+          pip install pyinstaller PySide6 plotly duckdb pandas numpy polars
+
+      - name: Build with PyInstaller
+        run: |
+          pyinstaller --noconfirm --onedir --windowed --clean `
+            --name "MemristorAnalysisTool" `
+            --collect-all PySide6 `
+            --collect-all plotly `
+            --collect-all duckdb `
+            --paths "src" `
+            "src\main.py"
+
+      - name: Archive Production Artifact
+        # PyInstaller creates a folder in 'dist/MemristorAnalysisTool'
+        # We zip it so it's easy to download
+        run: |
+          Compress-Archive -Path dist\MemristorAnalysisTool -DestinationPath MemristorAnalysisTool_Windows.zip
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: MemristorAnalysisTool-Windows-Build
+          path: MemristorAnalysisTool_Windows.zip
+          retention-days: 5
