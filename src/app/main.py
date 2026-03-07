@@ -10,12 +10,22 @@ if __package__ is None:
 
 
 def main():
+
+    # Smoke Test
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--smoke-test", action="store_true")
+    args, unknown = parser.parse_known_args()
+    
     app = qt.QApplication(sys.argv)
     app.setStyle("Fusion")
 
     window = MainWindow()
     window.show()
 
+    if args.smoke_test:
+        print("Smoke test: UI initialized successfully. Exiting.")
+        return # Exit before app.exec()
+    
     sys.exit(app.exec())
 
 
