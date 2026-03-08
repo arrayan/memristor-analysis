@@ -51,6 +51,13 @@ class MenuBar(qt.QMenuBar):
         self.file_sub_menu_export_all.addAction(
             self.menu_actions[MenuAction.EXPORT_ALL_PDF]
         )
+        self.file_sub_menu_export_all.addSeparator()
+        self.file_sub_menu_export_all.addAction(
+            self.menu_actions[MenuAction.EXPORT_ALL_CSV]
+        )
+        self.file_sub_menu_export_all.addAction(
+            self.menu_actions[MenuAction.EXPORT_ALL_TXT]
+        )
         # Populate "Current To"
         self.file_sub_menu_export_current.addAction(
             self.menu_actions[MenuAction.EXPORT_CURRENT_PNG]
@@ -66,6 +73,13 @@ class MenuBar(qt.QMenuBar):
         )
         self.file_sub_menu_export_current.addAction(
             self.menu_actions[MenuAction.EXPORT_CURRENT_PDF]
+        )
+        self.file_sub_menu_export_current.addSeparator()
+        self.file_sub_menu_export_current.addAction(
+            self.menu_actions[MenuAction.EXPORT_CURRENT_CSV]
+        )
+        self.file_sub_menu_export_current.addAction(
+            self.menu_actions[MenuAction.EXPORT_CURRENT_TXT]
         )
         self.file_menu.addAction(self.menu_actions[MenuAction.EXPORT_ALL])
         self.file_menu.addAction(self.menu_actions[MenuAction.EXPORT_CURRENT])

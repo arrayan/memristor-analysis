@@ -4,6 +4,9 @@ from PySide6.QtCore import QUrl
 from pathlib import Path
 import plotly.io as pio
 import os
+import csv
+import base64
+import numpy as np
 from svglib.svglib import svg2rlg
 from reportlab.graphics import renderPS
 import tempfile
@@ -122,3 +125,73 @@ class PlotViewer(QWidget):
         # Normal formats (PNG/SVG/PDF)
         fig.write_image(out_path, format=fmt)
         return True
+
+    def export_data(self, out_path: str, fmt: str) -> bool:
+        fig = self._resolve_figure()
+        if fig is None:
+            return False
+
+        delimiter = "\t" if fmt.lower() == "txt" else ","
+        columns = self._extract_trace_columns(fig)
+        if not columns:
+            return False
+
+        try:
+            self._write_delimited(out_path, columns, delimiter)
+            return True
+        except Exception as e:
+            print(f"Data export error: {e}")
+            return False
+
+    def _resolve_figure(self):
+        if self.figure is not None:
+            return self.figure
+
+        if not self.html_path:
+            return None
+
+        json_path = Path(self.html_path).with_suffix(".json")
+        if not json_path.exists():
+            return None
+
+        return pio.from_json(json_path.read_text(encoding="utf-8"))
+
+    @staticmethod
+    def _decode_array(arr):
+        if arr is None:
+            return []
+        if isinstance(arr, dict) and "bdata" in arr:
+            return np.frombuffer(
+                base64.b64decode(arr["bdata"]), dtype=arr["dtype"]
+            ).tolist()
+        if hasattr(arr, "tolist"):
+            return arr.tolist()
+        return list(arr)
+
+    @staticmethod
+    def _extract_trace_columns(fig):
+        columns = []
+        for trace in fig.data:
+            name = trace.name or "trace"
+            if trace.type == "box":
+                y = PlotViewer._decode_array(trace.y)
+                columns.append((f"{name}_y", y))
+            else:
+                x = PlotViewer._decode_array(trace.x)
+                y = PlotViewer._decode_array(trace.y)
+                columns.append((f"{name}_x", x))
+                columns.append((f"{name}_y", y))
+        return columns
+
+    @staticmethod
+    def _write_delimited(out_path, columns, delimiter):
+        headers = [col[0] for col in columns]
+        data = [col[1] for col in columns]
+        max_len = max(len(d) for d in data) if data else 0
+
+        with open(out_path, "w", newline="", encoding="utf-8") as f:
+            writer = csv.writer(f, delimiter=delimiter)
+            writer.writerow(headers)
+            for i in range(max_len):
+                row = [d[i] if i < len(d) else "" for d in data]
+                writer.writerow(row)
