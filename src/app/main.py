@@ -25,7 +25,7 @@ def main():
 
     if args.smoke_test:
         print("Smoke test: UI initialized successfully. Exiting.")
-        return  # Exit before app.exec()
+        sys.exit(0)  # Exit before app.exec()
 
     sys.exit(app.exec())
 
