@@ -1,13 +1,14 @@
 import sys
 import os
-import argparse
-import PySide6.QtWidgets as qt
-from src.app.ui import MainWindow
 
-if __package__ is None:
-    sys.path.insert(
-        0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    )
+# Ensure the src/ directory is on sys.path so "app.*" imports resolve
+# both when running as a script and in a PyInstaller build.
+if not getattr(sys, "frozen", False) and __package__ is None:
+    sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+import argparse  # noqa: E402
+import PySide6.QtWidgets as qt  # noqa: E402
+from app.ui import MainWindow  # noqa: E402
 
 
 def main():
