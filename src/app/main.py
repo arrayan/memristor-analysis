@@ -1,3 +1,4 @@
+import multiprocessing
 import sys
 import os
 
@@ -12,7 +13,7 @@ from app.ui import MainWindow  # noqa: E402
 
 
 def main():
-
+    multiprocessing.freeze_support()
     # Smoke Test
     parser = argparse.ArgumentParser()
     parser.add_argument("--smoke-test", action="store_true")
