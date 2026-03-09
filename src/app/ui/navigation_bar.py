@@ -2,15 +2,15 @@ from pathlib import Path
 import PySide6.QtWidgets as qt
 from PySide6.QtCore import Qt
 from .plot_viewer import PlotViewer
+from app.core.paths import TEMP_DIR
 
 
 class NavigationBar(qt.QTabWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
 
-        self.temp_root = Path(__file__).parent.parent / "temp"
-        self.temp_device_dir = self.temp_root / "device"
-        self.temp_stack_dir = self.temp_root / "stack"
+        self.temp_device_dir = TEMP_DIR / "Device Level"
+        self.temp_stack_dir = TEMP_DIR / "Stack Level"
 
         self.temp_device_dir.mkdir(parents=True, exist_ok=True)
         self.temp_stack_dir.mkdir(parents=True, exist_ok=True)

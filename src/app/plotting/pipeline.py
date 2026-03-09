@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
+
+import duckdb
 import pandas as pd
 
 from .config import Config
@@ -51,6 +53,33 @@ def _infer_devices(sets: list[str]) -> list[str]:
 
 
 def load_all(cfg: Config) -> LoadedData:
+    # 1. Safety check for the cycles table (Catalog Error prevention)
+    # Prevents a bug encountered during initial build testing
+    with duckdb.connect(str(cfg.db_file)) as conn:
+        res = conn.execute(
+            "SELECT count(*) FROM information_schema.tables WHERE table_name = 'cycles'"
+        ).fetchone()
+        table_exists = res[0] > 0
+
+    if not table_exists:
+        # Return a COMPLETELY populated object with empty data structures.
+        # This prevents TypeErrors and AttributeErrors in the plotting scripts.
+        return LoadedData(
+            sets=[],
+            resets=[],
+            raw_characteristic={},
+            raw_endurance={},
+            raw_reset={},
+            forming_v=None,
+            forming_v_by_device={},
+            leakage_i_by_device={},
+            classic=pd.DataFrame(),
+            cdf_table=pd.DataFrame(),
+            box_table=pd.DataFrame(),
+            end_df=pd.DataFrame(),
+            scatter_df=pd.DataFrame(),
+        )
+
     with DuckDBSession(cfg.db_file) as conn:
         repo = MemristorRepository(conn)
 

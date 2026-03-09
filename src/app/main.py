@@ -1,3 +1,4 @@
+import multiprocessing
 import sys
 import os
 import argparse
@@ -11,7 +12,7 @@ if __package__ is None:
 
 
 def main():
-
+    multiprocessing.freeze_support()
     # Smoke Test
     parser = argparse.ArgumentParser()
     parser.add_argument("--smoke-test", action="store_true")
