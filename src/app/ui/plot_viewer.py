@@ -51,10 +51,20 @@ class PlotViewer(QWidget):
             print(f"Error: File not found at {file_path}")
 
     def set_scale(self, scale_type: str):
-        """Sets the y-axis scale: 'log' or 'linear'"""
         if self.figure is not None:
             self.figure.update_layout(yaxis_type=scale_type)
             self.render_plot()
+        else:
+            js = f"""
+            var divs = document.querySelectorAll('.plotly-graph-div');
+            if (divs.length > 0) {{
+                Plotly.relayout(divs[0], {{
+                     'yaxis.type': '{scale_type}',
+                    'yaxis.autorange': true
+                }});
+            }}
+            """
+            self.browser.page().runJavaScript(js)
 
     def export_image(self, out_path: str, fmt: str) -> bool:
         fmt = fmt.lower().strip()

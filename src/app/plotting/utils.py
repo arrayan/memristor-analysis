@@ -47,3 +47,21 @@ def find_device_sets(
         device_sets = [s for s in all_sources if device in s]
 
     return device_sets
+
+
+def log_axis_config(vals: list[float]) -> dict:
+    """
+    Returns Plotly axis kwargs for a log-scale axis.
+    Uses dtick=1 so Plotly spaces ticks natively (one per decade),
+    and autorange=True so all data including outliers is always visible.
+
+    Usage:
+        yaxis_config = dict(type="log", title_text="...", ...)
+        yaxis_config.update(log_axis_config(all_y_vals))
+        fig.update_yaxes(**yaxis_config)
+    """
+    return dict(
+        autorange=True,
+        dtick=1,
+        tickformat=".0e",
+    )

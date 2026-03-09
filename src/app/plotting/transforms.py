@@ -184,8 +184,11 @@ def build_endurance_table(
             .reset_index(drop=True)
         )
 
-        classic["R_LRS"] = 0.2 / classic["I_LRS"].abs().replace(0, np.nan)
-        classic["R_HRS"] = 0.2 / classic["I_HRS"].abs().replace(0, np.nan)
+        MIN_CURRENT = 1e-10  # below 0.1 nA is treated as unmeasured
+        i_lrs = classic["I_LRS"].abs()
+        i_hrs = classic["I_HRS"].abs()
+        classic["R_LRS"] = 0.2 / i_lrs.where(i_lrs > MIN_CURRENT)
+        classic["R_HRS"] = 0.2 / i_hrs.where(i_hrs > MIN_CURRENT)
         classic["Memory_window"] = classic["R_HRS"] / classic["R_LRS"]
 
         reset_key = s.replace("endurance_set", "endurance_reset")

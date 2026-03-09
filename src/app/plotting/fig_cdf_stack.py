@@ -1,10 +1,9 @@
 from __future__ import annotations
-import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 import plotly.express as px
 from .fig_cdf import _cdf_xy
-from .utils import has_valid_data, find_device_sets
+from .utils import has_valid_data, find_device_sets, log_axis_config
 
 
 def build_stack_level_cdf_figs(
@@ -29,9 +28,6 @@ def build_stack_level_cdf_figs(
 
     cols = px.colors.sample_colorscale("Viridis", max(len(devices), 2))
     color_map = {d: cols[i] for i, d in enumerate(devices)}
-
-    tick_vals = [10.0**i for i in range(-15, 16)]
-    tick_text = [f"1e{i}" if i != 0 else "1" for i in range(-15, 16)]
 
     figures = []
 
@@ -87,9 +83,6 @@ def build_stack_level_cdf_figs(
         if is_log:
             xaxis_kwargs = dict(
                 type="log",
-                tickmode="array",
-                tickvals=tick_vals,
-                ticktext=tick_text,
                 title_text=f"|{info['pretty']}|",
                 exponentformat="power",
                 showgrid=True,
@@ -97,17 +90,7 @@ def build_stack_level_cdf_figs(
                 zeroline=False,
                 minor=dict(showgrid=False),
             )
-
-            if all_x_vals:
-                lmin = np.log10(min(all_x_vals))
-                lmax = np.log10(max(all_x_vals))
-                if (lmax - lmin) < 1.0:
-                    mid = (lmin + lmax) / 2
-                    xaxis_kwargs["range"] = [mid - 0.55, mid + 0.55]
-                else:
-                    pad = (lmax - lmin) * 0.05
-                    xaxis_kwargs["range"] = [lmin - pad, lmax + pad]
-
+            xaxis_kwargs.update(log_axis_config(all_x_vals))
             fig.update_xaxes(**xaxis_kwargs)
         else:
             fig.update_xaxes(
