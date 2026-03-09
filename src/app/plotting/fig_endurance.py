@@ -3,16 +3,14 @@ import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 import plotly.express as px
+from .utils import has_valid_data
 
 
 def build_endurance_figs(end_df: "pd.DataFrame", sets: list[str]) -> list[go.Figure]:
     """
     Creates a list of Endurance Figures (one per parameter).
-    - R, I, and Memory Window use Log Scale.
-    - Voltages use Linear Scale.
-    - All sets (files) are displayed in the same plot.
     """
-    if end_df is None or end_df.empty or not sets:
+    if not has_valid_data(end_df, sets):
         return []
 
     param_map = {
@@ -29,7 +27,6 @@ def build_endurance_figs(end_df: "pd.DataFrame", sets: list[str]) -> list[go.Fig
     cols = px.colors.qualitative.Plotly
     color_map = {s: cols[i % len(cols)] for i, s in enumerate(sets)}
 
-    # Major Magnitude Log Ticks
     tick_vals = [10.0**i for i in range(-15, 16)]
     tick_text = [f"1e{i}" if i != 0 else "1" for i in range(-15, 16)]
 
@@ -49,7 +46,6 @@ def build_endurance_figs(end_df: "pd.DataFrame", sets: list[str]) -> list[go.Fig
             if df_s.empty:
                 continue
 
-            # Prepare data
             x = df_s["cycle_number"]
             y = pd.to_numeric(df_s[param], errors="coerce")
 
@@ -74,7 +70,6 @@ def build_endurance_figs(end_df: "pd.DataFrame", sets: list[str]) -> list[go.Fig
                     )
                 )
 
-        # --- Axis Configuration ---
         if is_log:
             yaxis_config = dict(
                 type="log",
@@ -87,7 +82,6 @@ def build_endurance_figs(end_df: "pd.DataFrame", sets: list[str]) -> list[go.Fig
                 minor=dict(showgrid=False),
                 zeroline=False,
             )
-            # Force range logic: ensure at least one decade is visible
             if all_y_vals:
                 lmin, lmax = np.log10(min(all_y_vals)), np.log10(max(all_y_vals))
                 if (lmax - lmin) < 1.0:
@@ -106,7 +100,6 @@ def build_endurance_figs(end_df: "pd.DataFrame", sets: list[str]) -> list[go.Fig
 
         fig.update_xaxes(title_text="Cycle Number", gridcolor="#E5E5E5")
 
-        # --- Layout ---
         fig.update_layout(
             title=f"Endurance Performance – {info['pretty']}",
             width=900,
