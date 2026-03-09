@@ -55,32 +55,22 @@ def _infer_devices(sets: list[str]) -> list[str]:
 def load_all(cfg: Config) -> LoadedData:
     # 1. Safety check for the cycles table (Catalog Error prevention)
     # Prevents a bug encountered during initial build testing
-    with duckdb.connect(str(cfg.db_file)) as conn:
-        res = conn.execute(
+    # 1. Check if the 'cycles' table exists
+    with duckdb.connect(str(cfg.db_file)) as check_conn:
+        table_exists = check_conn.execute(
             "SELECT count(*) FROM information_schema.tables WHERE table_name = 'cycles'"
-        ).fetchone()
-        table_exists = res[0] > 0
+        ).fetchone()[0]
 
-    if not table_exists:
-        # Return a COMPLETELY populated object with empty data structures.
-        # This prevents TypeErrors and AttributeErrors in the plotting scripts.
-        return LoadedData(
-            sets=[],
-            resets=[],
-            raw_characteristic={},
-            raw_endurance={},
-            raw_reset={},
-            forming_v=None,
-            forming_v_by_device={},
-            leakage_i_by_device={},
-            classic=pd.DataFrame(),
-            cdf_table=pd.DataFrame(),
-            box_table=pd.DataFrame(),
-            end_df=pd.DataFrame(),
-            scatter_df=pd.DataFrame(),
+    # 2. If the file exists but is empty, raise a helpful error
+    if table_exists == 0:
+        raise RuntimeError(
+            f"The database at {cfg.db_file} contains no data.\n\n"
+            "Please check if your Excel files follow the required naming convention "
+            "and contain the necessary 'cycles' sheets."
         )
 
-    with DuckDBSession(cfg.db_file) as conn:
+
+with DuckDBSession(cfg.db_file) as conn:
         repo = MemristorRepository(conn)
 
         sets = repo.list_endurance_sets(cfg.endurance_set_like)
