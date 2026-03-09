@@ -56,14 +56,9 @@ class MemristorRepository:
         ).df()
 
     def load_endurance_cycles_for_reset(self, source_file: str) -> pd.DataFrame:
-        """
-        Raw data from endurance reset files:
-        cycle_number, Time, AV, AI
-        Used for V_reset and I_reset_max.
-        """
         return self.conn.execute(
             """
-            SELECT cycle_number, Time, AV, AI
+            SELECT cycle_number, Time, AV, AI, VRESET, IRESET
             FROM cycles
             WHERE source_file = ?
             ORDER BY cycle_number, Time
