@@ -222,11 +222,15 @@ class MainWindow(qt.QMainWindow):
 
     def on_import_success(self):
         self.pd.close()
-        # Force the NavigationBar to reload the tabs (which now have new HTML files)
-        self.nav_bar.level_dropdown.setCurrentText("Device Level")
-        self.nav_bar.update_tabs_by_level("Device Level")
+
+        # Access the mode used during this specific import from the worker
+        imported_mode_value = self.worker.mode.value
+
+        # Manually trigger the tab update for the specific mode
+        self.nav_bar.update_tabs_by_level(imported_mode_value)
+
         qt.QMessageBox.information(
-            self, "Success", "Data imported and plots generated successfully."
+            self, "Success", f"{imported_mode_value} data processed successfully."
         )
 
     def on_import_error(self, err_msg):
