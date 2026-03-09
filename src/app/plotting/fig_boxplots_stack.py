@@ -3,19 +3,17 @@ import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 import plotly.express as px
-from .utils import has_valid_data
+from .utils import has_valid_data, find_device_sets
 
 
-def build_boxplots_figs(box_table: "pd.DataFrame", sets: list[str]) -> list[go.Figure]:
+def build_stack_level_boxplots(
+    box_table: pd.DataFrame, stack_id: str, devices: list[str]
+) -> list[go.Figure]:
     """
-    Creates a list of boxplot Figure objects, one for each parameter.
-    Each figure shows individual boxes per source file PLUS a unified
-    'All Data' box aggregating all sets into one dataset.
-
-    - R_LRS, R_HRS, and I_reset_max use Log Scale.
-    - Voltages (VSET, V_reset, V_forming) use Linear Scale.
+    Stack-Level Boxplots: one box per device (aggregated) PLUS a unified
+    'All Devices' box combining the entire stack into one dataset.
     """
-    if not has_valid_data(box_table, sets):
+    if not has_valid_data(box_table, devices):
         return []
 
     param_map = {
@@ -28,8 +26,8 @@ def build_boxplots_figs(box_table: "pd.DataFrame", sets: list[str]) -> list[go.F
         "I_leakage_pristine": {"pretty": "I_leakage pristine (A)", "scale": "log"},
     }
 
-    cols = px.colors.sample_colorscale("Viridis", max(len(sets), 2))
-    color_map = {s: cols[i] for i, s in enumerate(sets)}
+    cols = px.colors.sample_colorscale("Viridis", max(len(devices), 2))
+    color_map = {d: cols[i] for i, d in enumerate(devices)}
 
     tick_vals = [10.0**i for i in range(-15, 16)]
     tick_text = [f"1e{i}" if i != 0 else "1" for i in range(-15, 16)]
@@ -45,10 +43,11 @@ def build_boxplots_figs(box_table: "pd.DataFrame", sets: list[str]) -> list[go.F
         has_any_data = False
         all_vals_for_param = []
 
-        # Individual boxes per source file
-        for s in sets:
-            df_s = box_table[box_table["source_file"] == s]
-            vals = pd.to_numeric(df_s[param], errors="coerce").dropna()
+        # One box per device (aggregated across all its sets)
+        for device in devices:
+            device_sets = find_device_sets(box_table, device)
+            df_device = box_table[box_table["source_file"].isin(device_sets)]
+            vals = pd.to_numeric(df_device[param], errors="coerce").dropna()
 
             if is_log:
                 vals = vals.abs()
@@ -61,18 +60,18 @@ def build_boxplots_figs(box_table: "pd.DataFrame", sets: list[str]) -> list[go.F
             fig.add_trace(
                 go.Box(
                     y=vals,
-                    name=s,
-                    marker_color=color_map.get(s),
-                    boxmean=False,
+                    name=device,
+                    marker_color=color_map.get(device),
                     line=dict(width=2),
-                    fillcolor=color_map.get(s),
+                    fillcolor=color_map.get(device),
                     opacity=0.7,
                     boxpoints=False,
-                    legendgroup="individual",
+                    boxmean=False,
+                    legendgroup="devices",
                 )
             )
 
-        # Unified "All Data" box — all sets combined
+        # Unified "All Devices" box — entire stack as one dataset
         all_vals = pd.to_numeric(box_table[param], errors="coerce").dropna()
         if is_log:
             all_vals = all_vals.abs()
@@ -84,12 +83,12 @@ def build_boxplots_figs(box_table: "pd.DataFrame", sets: list[str]) -> list[go.F
             fig.add_trace(
                 go.Box(
                     y=all_vals,
-                    name="All Data (unified)",
+                    name="All Devices (unified)",
                     marker_color="black",
-                    boxmean=False,
                     line=dict(width=2.5, color="black"),
                     fillcolor="rgba(0,0,0,0.15)",
                     boxpoints=False,
+                    boxmean=False,
                     legendgroup="unified",
                 )
             )
@@ -129,16 +128,16 @@ def build_boxplots_figs(box_table: "pd.DataFrame", sets: list[str]) -> list[go.F
                 zerolinecolor="gray",
             )
 
-        fig.update_xaxes(title_text="Set / File", showgrid=True, gridcolor="#E5E5E5")
+        fig.update_xaxes(title_text="Device", showgrid=True, gridcolor="#E5E5E5")
 
         fig.update_layout(
-            title=f"Boxplot – {info['pretty']} ({info['scale'].capitalize()} Scale)",
+            title=f"Stack {stack_id} – {info['pretty']} ({info['scale'].capitalize()} Scale) | Device-Level Aggregation",
             width=900,
             height=600,
             template="plotly_white",
             showlegend=True,
             boxmode="group",
-            meta={"param_id": param},
+            meta={"param_id": param, "level": "stack", "stack_id": stack_id},
         )
 
         if not has_any_data:

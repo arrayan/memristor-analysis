@@ -11,7 +11,9 @@ class Config:
 
     # File name patterns
     endurance_set_like: str = "%endurance_set%"
+    endurance_reset_like: str = "%endurance_reset%"
     electroforming_like: str = "%electroforming%"
+    leakage_like: str = "%leakage%"
 
     # Output HTML files
     characteristic_html: str = "characteristic_plots.html"
@@ -22,7 +24,6 @@ class Config:
 
 
 def load_config() -> Config:
-    # DB path from environment variable (portable across machines)
     db = Path(__file__).parent.parent.parent.parent / "output.duckdb"
     if not db:
         raise RuntimeError(
@@ -35,7 +36,6 @@ def load_config() -> Config:
     if not db_file.exists():
         raise FileNotFoundError(f"DuckDB file not found: {db_file}")
 
-    # Output directory defaults to project_root/output (project_root = parent of plotting/)
     project_root = Path(__file__).resolve().parent.parent
     output_dir = project_root / "temp" / "device"
     output_dir.mkdir(parents=True, exist_ok=True)
