@@ -69,8 +69,7 @@ def load_all(cfg: Config) -> LoadedData:
             "and contain the necessary 'cycles' sheets."
         )
 
-
-with DuckDBSession(cfg.db_file) as conn:
+    with DuckDBSession(cfg.db_file) as conn:
         repo = MemristorRepository(conn)
 
         sets = repo.list_endurance_sets(cfg.endurance_set_like)
@@ -97,28 +96,28 @@ with DuckDBSession(cfg.db_file) as conn:
 
         classic = repo.load_classic_cycle_params_for_sets(sets)
 
-    # transforms (no DB needed)
-    cdf_table = build_cdf_table(
-        classic, raw_reset, forming_v_by_device, leakage_i_by_device
-    )
-    box_table = build_box_table(
-        classic, raw_reset, forming_v_by_device, leakage_i_by_device
-    )
-    end_df = build_endurance_table(raw_endurance, raw_reset)
-    scatter_df = build_scatter_table(end_df)
+        # transforms (no DB needed)
+        cdf_table = build_cdf_table(
+            classic, raw_reset, forming_v_by_device, leakage_i_by_device
+        )
+        box_table = build_box_table(
+            classic, raw_reset, forming_v_by_device, leakage_i_by_device
+        )
+        end_df = build_endurance_table(raw_endurance, raw_reset)
+        scatter_df = build_scatter_table(end_df)
 
-    return LoadedData(
-        sets=sets,
-        resets=resets,
-        raw_characteristic=raw_characteristic,
-        raw_endurance=raw_endurance,
-        raw_reset=raw_reset,
-        forming_v=forming_v,
-        forming_v_by_device=forming_v_by_device,
-        leakage_i_by_device=leakage_i_by_device,
-        classic=classic,
-        cdf_table=cdf_table,
-        box_table=box_table,
-        end_df=end_df,
-        scatter_df=scatter_df,
-    )
+        return LoadedData(
+            sets=sets,
+            resets=resets,
+            raw_characteristic=raw_characteristic,
+            raw_endurance=raw_endurance,
+            raw_reset=raw_reset,
+            forming_v=forming_v,
+            forming_v_by_device=forming_v_by_device,
+            leakage_i_by_device=leakage_i_by_device,
+            classic=classic,
+            cdf_table=cdf_table,
+            box_table=box_table,
+            end_df=end_df,
+            scatter_df=scatter_df,
+        )
