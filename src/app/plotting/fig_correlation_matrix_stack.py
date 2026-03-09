@@ -30,10 +30,6 @@ def build_stack_level_correlation_matrix_figs(
     if len(available_params) < 2:
         return []
 
-    # to make sure its initialized
-    log_params: list[str] = ["I_LRS", "I_HRS", "R_LRS", "R_HRS", "I_reset_max"]
-    log_params = [p for p in log_params if p in available_params]
-
     figures = []
 
     for device in devices:
@@ -46,12 +42,6 @@ def build_stack_level_correlation_matrix_figs(
 
         # cleanup data
         df_numeric = df_device[available_params].apply(pd.to_numeric, errors="coerce")
-
-        log_params = ["I_LRS", "I_HRS", "R_LRS", "R_HRS", "I_reset_max"]
-        for p in available_params:
-            if p in log_params:
-                df_numeric[p] = df_numeric[p].abs()
-                df_numeric.loc[df_numeric[p] <= 0, p] = np.nan
 
         # Correlation
         corr_matrix = df_numeric.corr()
@@ -100,11 +90,6 @@ def build_stack_level_correlation_matrix_figs(
 
     if not df_all.empty:
         df_numeric_all = df_all[available_params].apply(pd.to_numeric, errors="coerce")
-        for p in available_params:
-            if p in log_params:
-                df_numeric_all[p] = df_numeric_all[p].abs()
-                df_numeric_all.loc[df_numeric_all[p] <= 0, p] = np.nan
-
         corr_matrix_all = df_numeric_all.corr()
 
         if not corr_matrix_all.empty:
