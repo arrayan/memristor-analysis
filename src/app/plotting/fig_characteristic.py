@@ -133,6 +133,7 @@ def build_characteristic_figs(
     # ── Fig 2: Normalized Conductance (G/G0) vs AV ─────────────────────────
     fig2 = go.Figure()
 
+    # Set data
     for s in sets:
         df = raw_by_set[s]
         cycles = df["cycle_number"].unique()
@@ -140,8 +141,6 @@ def build_characteristic_figs(
 
         for idx, cyc in enumerate(cycles):
             tiny = df[df["cycle_number"] == cyc]
-
-            # Normalize conductance by G0
             y_vals = pd.to_numeric(tiny["NORM_COND"], errors="coerce") / G0
 
             fig2.add_trace(
@@ -151,16 +150,43 @@ def build_characteristic_figs(
                     mode="lines",
                     line=dict(color=color, width=1.2),
                     opacity=0.5,
-                    name=s,
+                    name=f"{s} (set)",
                     legendgroup=s,
                     showlegend=(idx == 0),
                     hovertemplate=f"Set: {s}<br>Cycle: {cyc}<br>V: %{{x}}V<br>G/G₀: %{{y:.3f}}<extra></extra>",
                 )
             )
 
+    # Reset data
+    for s, df_reset in raw_by_reset.items():
+        if df_reset.empty:
+            continue
+        if "NORM_COND" not in df_reset.columns:
+            continue
+        cycles = df_reset["cycle_number"].unique()
+        color = reset_color_map.get(s, "#888888")
+
+        for idx, cyc in enumerate(cycles):
+            tiny = df_reset[df_reset["cycle_number"] == cyc]
+            y_vals = pd.to_numeric(tiny["NORM_COND"], errors="coerce") / G0
+
+            fig2.add_trace(
+                go.Scatter(
+                    x=tiny["AV"],
+                    y=y_vals,
+                    mode="lines",
+                    line=dict(color=color, width=1.2, dash="dot"),
+                    opacity=0.5,
+                    name=f"{s} (reset)",
+                    legendgroup=f"{s}_reset",
+                    showlegend=(idx == 0),
+                    hovertemplate=f"Reset: {s}<br>Cycle: {cyc}<br>V: %{{x}}V<br>G/G₀: %{{y:.3f}}<extra></extra>",
+                )
+            )
+
     fig2.update_xaxes(
         title_text="AV (V)",
-        autorange="reversed",
+        autorange=True,
         gridcolor="#E5E5E5",
         zeroline=True,
         zerolinecolor="gray",
@@ -174,7 +200,7 @@ def build_characteristic_figs(
         autorange=True,
     )
     fig2.update_layout(
-        title="Characteristic Plot – Normalized Conductance (G/G₀) vs V",
+        title="Characteristic Plot – Normalized Conductance (G/G₀) vs V (Set + Reset)",
         width=1000,
         height=700,
         template="plotly_white",
