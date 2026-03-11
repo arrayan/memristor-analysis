@@ -86,6 +86,42 @@ def _assign_reset_by_position(
     return classic
 
 
+def compute_i_lrs_from_reset(df_reset: pd.DataFrame) -> pd.DataFrame:
+    """
+    Extract I_LRS per cycle from reset files.
+    Uses the last IRESET value per cycle (the LRS current read at the end of reset).
+    Returns abs values — current direction is not meaningful for resistance calculation.
+    """
+    if df_reset.empty:
+        return pd.DataFrame(columns=["cycle_number", "I_LRS"])
+
+    if "IRESET" in df_reset.columns:
+        valid = df_reset[df_reset["IRESET"].notna() & (df_reset["IRESET"] != 0)]
+        if valid.empty:
+            return pd.DataFrame(columns=["cycle_number", "I_LRS"])
+        out = (
+            valid.groupby("cycle_number")["IRESET"]
+            .last()
+            .abs()
+            .reset_index()
+            .rename(columns={"IRESET": "I_LRS"})
+        )
+        return out
+
+    # Fallback: use last AI value per cycle
+    valid = df_reset[df_reset["AI"].notna() & (df_reset["AI"] != 0)]
+    if valid.empty:
+        return pd.DataFrame(columns=["cycle_number", "I_LRS"])
+    out = (
+        valid.groupby("cycle_number")["AI"]
+        .last()
+        .abs()
+        .reset_index()
+        .rename(columns={"AI": "I_LRS"})
+    )
+    return out
+
+
 def build_cdf_table(
     classic_df: pd.DataFrame,
     raw_by_reset: dict[str, pd.DataFrame],
@@ -176,7 +212,6 @@ def build_endurance_table(
             df_set.groupby("cycle_number")
             .agg(
                 V_set=("VSET", "max"),
-                I_LRS=("ILRS", "last"),
                 I_HRS=("IHRS", "last"),
             )
             .reset_index()
@@ -184,15 +219,28 @@ def build_endurance_table(
             .reset_index(drop=True)
         )
 
-        MIN_CURRENT = 1e-10  # below 0.1 nA is treated as unmeasured
+        reset_key = s.replace("endurance_set", "endurance_reset")
+        df_reset = raw_by_reset.get(reset_key, pd.DataFrame())
+
+        # I_LRS and R_LRS from reset files
+        i_lrs_df = compute_i_lrs_from_reset(df_reset).reset_index(drop=True)
+        if not i_lrs_df.empty:
+            classic["I_LRS"] = i_lrs_df["I_LRS"].reindex(classic.index).values
+            nan_count = classic["I_LRS"].isna().sum()
+            if nan_count > 0:
+                print(
+                    f"Warning: {nan_count} missing I_LRS cycles for {s} (reset file has fewer cycles than set file)"
+                )
+        else:
+            classic["I_LRS"] = np.nan
+            print(f"Warning: no valid I_LRS values found in reset file for {s}")
+
+        MIN_CURRENT = 1e-10
         i_lrs = classic["I_LRS"].abs()
         i_hrs = classic["I_HRS"].abs()
         classic["R_LRS"] = 0.2 / i_lrs.where(i_lrs > MIN_CURRENT)
         classic["R_HRS"] = 0.2 / i_hrs.where(i_hrs > MIN_CURRENT)
         classic["Memory_window"] = classic["R_HRS"] / classic["R_LRS"]
-
-        reset_key = s.replace("endurance_set", "endurance_reset")
-        df_reset = raw_by_reset.get(reset_key, pd.DataFrame())
 
         vreset = compute_v_reset(df_reset).reset_index(drop=True)
         ireset = compute_i_reset_max(df_reset).reset_index(drop=True)
