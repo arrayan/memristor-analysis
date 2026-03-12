@@ -1,5 +1,3 @@
-import os
-
 import PySide6.QtWidgets as qt
 from PySide6.QtCore import QThread, Qt
 from .menu_bar import MenuBar
@@ -192,7 +190,6 @@ class MainWindow(qt.QMainWindow):
             return
 
         path = path_to_glob(folder, mode)
-        os.environ["MEMRISTOR_MODE"] = mode.value
 
         # 1. Create Progress Dialog
         self.pd = qt.QProgressDialog("Initializing...", None, 0, 100, self)
