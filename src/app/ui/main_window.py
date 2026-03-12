@@ -223,8 +223,7 @@ class MainWindow(qt.QMainWindow):
     def on_import_success(self):
         self.pd.close()
         # Force the NavigationBar to reload the tabs (which now have new HTML files)
-        self.nav_bar.level_dropdown.setCurrentText("Device Level")
-        self.nav_bar.update_tabs_by_level("Device Level")
+        self.nav_bar.update_tabs_by_level()
         qt.QMessageBox.information(
             self, "Success", "Data imported and plots generated successfully."
         )
