@@ -161,11 +161,11 @@ class MemristorRepository:
             """
             SELECT source_file,
                    cycle_number,
-                   MAX(VSET)                              AS VSET,
-                   MAX(ILRS)                              AS I_LRS,
-                   MAX(IHRS)                              AS I_HRS,
-                   0.2 / NULLIF(MAX(ILRS), 0)            AS R_LRS,
-                   0.2 / NULLIF(MAX(IHRS), 0)            AS R_HRS
+                   MAX(VSET)                                          AS VSET,
+                   MAX(ILRS)                                          AS I_LRS,
+                   MAX(IHRS)                                          AS I_HRS,
+                   0.2 / NULLIF(MAX(CAST(ILRS AS DOUBLE)), 0.0)      AS R_LRS,
+                   0.2 / NULLIF(MAX(CAST(IHRS AS DOUBLE)), 0.0)      AS R_HRS
             FROM cycles
             WHERE source_file IN (SELECT * FROM UNNEST(?))
             GROUP BY source_file, cycle_number
