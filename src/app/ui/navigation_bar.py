@@ -51,7 +51,9 @@ class NavigationBar(qt.QTabWidget):
                 "• Ctrl+Shift+O : Import Stack Data"
             )
             instructions.setAlignment(Qt.AlignCenter)
-            instructions.setStyleSheet("font-size: 14px; color: #888; line-height: 150%;")
+            instructions.setStyleSheet(
+                "font-size: 14px; color: #888; line-height: 150%;"
+            )
 
             layout.addStretch()
             layout.addWidget(title, alignment=Qt.AlignCenter)
@@ -67,13 +69,17 @@ class NavigationBar(qt.QTabWidget):
                 dev_btn = qt.QPushButton("Continue Device Level Analysis")
                 dev_btn.setFixedSize(300, 45)
                 # We pass the mode value specifically
-                dev_btn.clicked.connect(lambda: self.update_tabs_by_level(Mode.DEVICE.value))
+                dev_btn.clicked.connect(
+                    lambda: self.update_tabs_by_level(Mode.DEVICE.value)
+                )
                 layout.addWidget(dev_btn, alignment=Qt.AlignCenter)
 
             if stack_data_exists:
                 stack_btn = qt.QPushButton("Continue Stack Level Analysis")
                 stack_btn.setFixedSize(300, 45)
-                stack_btn.clicked.connect(lambda: self.update_tabs_by_level(Mode.STACK.value))
+                stack_btn.clicked.connect(
+                    lambda: self.update_tabs_by_level(Mode.STACK.value)
+                )
                 layout.addWidget(stack_btn, alignment=Qt.AlignCenter)
 
             layout.addStretch()
@@ -82,7 +88,7 @@ class NavigationBar(qt.QTabWidget):
 
     def update_tabs_by_level(self, level_text=None):
         """
-        Populates tabs based on the requested level. 
+        Populates tabs based on the requested level.
         If level_text is None, it defaults to the MEMRISTOR_MODE environment variable.
         """
         self.clear()
@@ -92,44 +98,120 @@ class NavigationBar(qt.QTabWidget):
             level_text = os.environ.get("MEMRISTOR_MODE", Mode.DEVICE.value)
 
         param_labels = {
-            "V_set": "V Set", "V_reset": "V Reset", "R_LRS": "R LRS", 
-            "R_HRS": "R HRS", "I_LRS": "I LRS", "I_HRS": "I HRS",
-            "I_reset_max": "I Reset Max", "Memory_window": "Memory Window",
-            "VSET": "V Set", "V_forming": "V Forming",
+            "V_set": "V Set",
+            "V_reset": "V Reset",
+            "R_LRS": "R LRS",
+            "R_HRS": "R HRS",
+            "I_LRS": "I LRS",
+            "I_HRS": "I HRS",
+            "I_reset_max": "I Reset Max",
+            "Memory_window": "Memory Window",
+            "VSET": "V Set",
+            "V_forming": "V Forming",
             "I_leakage_pristine": "I Leakage Pristine",
         }
 
         corr_labels = {
-            "V_set_vs_I_HRS": "Vset vs IHRS", "V_set_vs_R_HRS": "Vset vs RHRS",
-            "V_reset_vs_I_LRS": "Vreset vs ILRS", "V_reset_vs_R_LRS": "Vreset vs RLRS",
-            "V_reset_vs_I_reset_max": "Vreset vs Ireset", "V_set_vs_V_reset": "Vset vs Vreset",
+            "V_set_vs_I_HRS": "Vset vs IHRS",
+            "V_set_vs_R_HRS": "Vset vs RHRS",
+            "V_reset_vs_I_LRS": "Vreset vs ILRS",
+            "V_reset_vs_R_LRS": "Vreset vs RLRS",
+            "V_reset_vs_I_reset_max": "Vreset vs Ireset",
+            "V_set_vs_V_reset": "Vset vs Vreset",
         }
 
         if level_text == Mode.DEVICE.value:
             base_dir = self.temp_device_dir
             char_labels = {"AI": "Current (A)", "NORM_COND": "Conductance (S)"}
 
-            self.addTab(self._create_nested_tab(base_dir, "endurance_performance", param_labels), "Endurance Performance")
-            self.addTab(self._create_nested_tab(base_dir, "boxplots", param_labels), "Endurance Boxplots")
-            self.addTab(self._create_nested_tab(base_dir, "cdfs", param_labels), "Endurance CDF")
-            self.addTab(self._create_nested_tab(base_dir, "characteristic_plots", char_labels), "Characteristic Plots")
-            self.addTab(self._create_nested_tab(base_dir, "correlation_plots", corr_labels), "Device Corr. Scatter")
-            self.addTab(self._create_nested_tab(base_dir, "correlation_matrices", self._discover_labels(base_dir / "correlation_matrices")), "Device Matrix")
+            self.addTab(
+                self._create_nested_tab(
+                    base_dir, "endurance_performance", param_labels
+                ),
+                "Endurance Performance",
+            )
+            self.addTab(
+                self._create_nested_tab(base_dir, "boxplots", param_labels),
+                "Endurance Boxplots",
+            )
+            self.addTab(
+                self._create_nested_tab(base_dir, "cdfs", param_labels), "Endurance CDF"
+            )
+            self.addTab(
+                self._create_nested_tab(base_dir, "characteristic_plots", char_labels),
+                "Characteristic Plots",
+            )
+            self.addTab(
+                self._create_nested_tab(base_dir, "correlation_plots", corr_labels),
+                "Device Corr. Scatter",
+            )
+            self.addTab(
+                self._create_nested_tab(
+                    base_dir,
+                    "correlation_matrices",
+                    self._discover_labels(base_dir / "correlation_matrices"),
+                ),
+                "Device Matrix",
+            )
 
         elif level_text == Mode.STACK.value:
             base_dir = self.temp_stack_dir
-            char_labels = {"AI": "Current (A)", "NORM_COND": "Conductance (S)", "butterfly_curve": "Butterfly"}
+            char_labels = {
+                "AI": "Current (A)",
+                "NORM_COND": "Conductance (S)",
+                "butterfly_curve": "Butterfly",
+            }
 
-            self.addTab(self._create_nested_tab(base_dir, "characteristic_plots", char_labels), "Char. Plots")
-            self.addTab(self._create_nested_tab(base_dir, "endurance_performance", param_labels), "Endurance")
-            self.addTab(self._create_nested_tab(base_dir, "boxplots", param_labels), "Boxplots")
-            self.addTab(self._create_nested_tab(base_dir, "boxplots_stack_level", param_labels), "Stack Boxplots")
+            self.addTab(
+                self._create_nested_tab(base_dir, "characteristic_plots", char_labels),
+                "Char. Plots",
+            )
+            self.addTab(
+                self._create_nested_tab(
+                    base_dir, "endurance_performance", param_labels
+                ),
+                "Endurance",
+            )
+            self.addTab(
+                self._create_nested_tab(base_dir, "boxplots", param_labels), "Boxplots"
+            )
+            self.addTab(
+                self._create_nested_tab(base_dir, "boxplots_stack_level", param_labels),
+                "Stack Boxplots",
+            )
             self.addTab(self._create_nested_tab(base_dir, "cdfs", param_labels), "CDF")
-            self.addTab(self._create_nested_tab(base_dir, "cdfs_stack_level", param_labels), "Stack CDF")
-            self.addTab(self._create_nested_tab(base_dir, "correlation_plots", corr_labels), "Corr. Scatter")
-            self.addTab(self._create_nested_tab(base_dir, "correlation_plots_stack_level", corr_labels), "Stack Corr. Scatter")
-            self.addTab(self._create_nested_tab(base_dir, "correlation_matrices", self._discover_labels(base_dir / "correlation_matrices")), "Matrix")
-            self.addTab(self._create_nested_tab(base_dir, "correlation_matrices_stack_level", self._discover_labels(base_dir / "correlation_matrices_stack_level")), "Stack Matrix")
+            self.addTab(
+                self._create_nested_tab(base_dir, "cdfs_stack_level", param_labels),
+                "Stack CDF",
+            )
+            self.addTab(
+                self._create_nested_tab(base_dir, "correlation_plots", corr_labels),
+                "Corr. Scatter",
+            )
+            self.addTab(
+                self._create_nested_tab(
+                    base_dir, "correlation_plots_stack_level", corr_labels
+                ),
+                "Stack Corr. Scatter",
+            )
+            self.addTab(
+                self._create_nested_tab(
+                    base_dir,
+                    "correlation_matrices",
+                    self._discover_labels(base_dir / "correlation_matrices"),
+                ),
+                "Matrix",
+            )
+            self.addTab(
+                self._create_nested_tab(
+                    base_dir,
+                    "correlation_matrices_stack_level",
+                    self._discover_labels(
+                        base_dir / "correlation_matrices_stack_level"
+                    ),
+                ),
+                "Stack Matrix",
+            )
 
     def _discover_labels(self, folder: Path) -> dict:
         """Auto-discover HTML files in a folder and build a labels map."""
