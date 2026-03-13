@@ -22,9 +22,6 @@ class ImportWorker(QObject):
         try:
             # set variable
             os.environ["MEMRISTOR_MODE"] = self.mode.value
-            print(
-                f"DEBUG: Process {os.getpid()} updated ENV: {os.environ['MEMRISTOR_MODE']}"
-            )
 
             # --- STEP 1: Data Conversion (Importing to DuckDB) ---
             self.status_message.emit("Phase 1/2: Updating database from raw files...")
