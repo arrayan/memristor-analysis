@@ -45,7 +45,7 @@ def build_stack_level_boxplots(
 
         # One box per device (aggregated across all its sets)
         for device in devices:
-            device_sets = find_device_sets(box_table, device)
+            device_sets = find_device_sets(box_table, device, stack_id=stack_id)
             df_device = box_table[box_table["source_file"].isin(device_sets)]
             vals = pd.to_numeric(df_device[param], errors="coerce").dropna()
 
@@ -79,7 +79,6 @@ def build_stack_level_boxplots(
 
         if not all_vals.empty:
             has_any_data = True
-            all_vals_for_param.extend(all_vals.tolist())
             fig.add_trace(
                 go.Box(
                     y=all_vals,
