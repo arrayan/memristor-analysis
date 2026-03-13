@@ -40,7 +40,10 @@ def _create_heatmap(
 
 
 def build_correlation_matrix_figs(
-    scatter_df: "pd.DataFrame", sets: list[str], devices: list[str] | None = None
+    scatter_df: "pd.DataFrame",
+    sets: list[str],
+    devices: list[str] | None = None,
+    stack_id: str = "",
 ) -> list[go.Figure]:
     """
     Device-Level: Correlation matrix heatmaps.
@@ -96,7 +99,7 @@ def build_correlation_matrix_figs(
 
     if devices:
         for device in devices:
-            device_sets = find_device_sets(scatter_df, device)
+            device_sets = find_device_sets(scatter_df, device, stack_id=stack_id)
 
             if not device_sets:
                 continue
