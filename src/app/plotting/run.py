@@ -26,7 +26,7 @@ def _write_json(fig, out_path) -> None:
     print("Wrote:", out_path)
 
 
-def main(mode: str = "device") -> None:
+def main() -> None:
     cfg = load_config()
     data = load_all(cfg)
 
