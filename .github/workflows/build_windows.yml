@@ -1,8 +1,15 @@
-name: Build Windows Executable
+name: Build and Release Tool
 
 on:
-  # Allows you to run this workflow manually from the Actions tab
+  # Trigger 1: Manual run from the Actions tab
   workflow_dispatch:
+  # Trigger 2: Automatic run when a version tag is pushed
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
 
 jobs:
   build:
@@ -16,23 +23,17 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-          cache: 'pip' # caching pip dependencies to speed up future runs
+          cache: 'pip'
 
-      - name: Install Dependencies from Requirements
+      - name: Install Dependencies
         run: |
           python -m pip install --upgrade pip setuptools wheel
-          if (Test-Path requirements.txt) {
-            pip install -r requirements.txt
-          } else {
-            Write-Error "requirements.txt not found!"
-            exit 1
-          }
+          if (Test-Path requirements.txt) { pip install -r requirements.txt }
 
       - name: Build with PyInstaller
         run: |
           pyinstaller --noconfirm --onedir --windowed --clean `
             --name "MemristorAnalysisTool" `
-            --log-level DEBUG `
             --collect-all PySide6 `
             --collect-all plotly `
             --collect-all duckdb `
@@ -41,44 +42,39 @@ jobs:
             --collect-all polars `
             --collect-all svglib `
             --paths "src" `
-            "src\app\main.py"
-
-      - name: Archive Production Artifact
-        # PyInstaller creates a folder in 'dist/MemristorAnalysisTool'
-        # We zip it so it's easy to download
-        run: |
-          Compress-Archive -Path dist\MemristorAnalysisTool -DestinationPath MemristorAnalysisTool_Windows.zip
-
-      - name: Upload Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: MemristorAnalysisTool-Windows-Build
-          path: MemristorAnalysisTool_Windows.zip
-          retention-days: 5
+            "src\main.py"
 
       - name: Run Smoke Test
         shell: pwsh
         run: |
-          Write-Host "Starting Built Executable for Smoke Test..."
-          
-          # 1. Start the process in the background
-          # We use the --smoke-test flag we just added
           $exePath = "dist\MemristorAnalysisTool\MemristorAnalysisTool.exe"
-          
-          # Run the EXE and capture output
-          $process = Start-Process -FilePath $exePath -ArgumentList "--smoke-test" -PassThru -NoNewWindow -ErrorAction Stop
-          
-          # 2. Wait a few seconds to see if it stays alive or crashes
+          $process = Start-Process -FilePath $exePath -ArgumentList "--smoke-test" -PassThru -NoNewWindow
           Start-Sleep -Seconds 10
-          
           if ($process.HasExited) {
-              if ($process.ExitCode -ne 0) {
-                  Write-Error "SMOKE TEST FAILED: Application crashed with exit code $($process.ExitCode)"
-                  exit 1
-              } else {
-                  Write-Host "Smoke Test Passed: Application initialized and exited cleanly."
-              }
+              if ($process.ExitCode -ne 0) { exit 1 }
           } else {
-              Write-Host "Smoke Test Passed: Application is running (forcing shutdown now)."
               Stop-Process -Id $process.Id -Force
           }
+
+      - name: Package Artifact
+        shell: pwsh
+        run: |
+          Compress-Archive -Path dist\MemristorAnalysisTool -DestinationPath MemristorAnalysisTool_Windows.zip
+
+      # This step UPLOADS the file so you can download it from the Action Summary page (Manual Run)
+      - name: Upload Build Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: MemristorAnalysisTool-Windows
+          path: MemristorAnalysisTool_Windows.zip
+
+      # CREATE THE RELEASE
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: MemristorAnalysisTool_Windows.zip
+          name: Release ${{ github.ref_name }}
+          generate_release_notes: true
+          draft: false
+          prerelease: false
