@@ -28,7 +28,6 @@ def _write_json(fig, out_path) -> None:
 
 
 def main(mode: str = "device") -> None:
-    os.environ["MEMRISTOR_MODE"] = mode
     cfg = load_config()
     data = load_all(cfg)
 
