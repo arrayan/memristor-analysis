@@ -21,30 +21,39 @@ def has_valid_data(
 
 
 def find_device_sets(
-    df: pd.DataFrame, device: str, source_col: str = "source_file"
+    df: pd.DataFrame,
+    device: str,
+    source_col: str = "source_file",
+    stack_id: str = "",
 ) -> list[str]:
     """
     Find all unique sets for a specific device from a DataFrame.
 
-    Tries exact pattern matching first (e.g., "_AI_" or ends with "_AI"),
-    falls back to substring matching if no exact matches found.
+    When *stack_id* is provided, uses precise prefix matching
+    (``{stack_id}_{device}_``) to avoid false positives when the stack ID
+    itself contains underscores.  Falls back to pattern matching otherwise.
 
     Args:
         df: DataFrame containing the source column
-        device: Device identifier to search for (e.g., "AI", "NORM_COND")
+        device: Device identifier to search for (e.g., "B12", "H9")
         source_col: Column name containing set identifiers (default: "source_file")
+        stack_id: Known stack identifier for precise prefix matching
 
     Returns:
         List of unique set names matching the device
     """
     all_sources = df[source_col].unique()
+
+    if stack_id:
+        prefix = f"{stack_id}_{device}_"
+        device_sets = [s for s in all_sources if s.startswith(prefix)]
+        if device_sets:
+            return device_sets
+
     device_pattern = f"_{device}_"
     device_sets = [
         s for s in all_sources if device_pattern in s or s.endswith(f"_{device}")
     ]
-
-    if not device_sets:
-        device_sets = [s for s in all_sources if device in s]
 
     return device_sets
 
