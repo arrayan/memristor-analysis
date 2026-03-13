@@ -1,6 +1,8 @@
+import os
 from pathlib import Path
 import PySide6.QtWidgets as qt
 from PySide6.QtCore import Qt
+
 from .plot_viewer import PlotViewer
 from app.core.paths import TEMP_DIR
 from app.core.modes import Mode
@@ -10,31 +12,16 @@ class NavigationBar(qt.QTabWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
 
+        # Map directories to Mode values
         self.temp_device_dir = TEMP_DIR / Mode.DEVICE.value
         self.temp_stack_dir = TEMP_DIR / Mode.STACK.value
 
+        # Ensure directories exist
         self.temp_device_dir.mkdir(parents=True, exist_ok=True)
         self.temp_stack_dir.mkdir(parents=True, exist_ok=True)
 
-        self.setup_ui()
+        # Dropdown UI is removed completely
         self.show_welcome_screen()
-
-    def setup_ui(self):
-        """Sets up the dropdown in the corner."""
-        self.corner_container = qt.QWidget()
-        self.corner_layout = qt.QHBoxLayout(self.corner_container)
-        self.corner_layout.setContentsMargins(10, 2, 20, 2)
-
-        level_label = qt.QLabel("Analysis Level:")
-        self.level_dropdown = qt.QComboBox()
-        self.level_dropdown.addItems(["Device Level", "Stack Level"])
-        self.level_dropdown.setFixedWidth(150)
-
-        self.level_dropdown.activated.connect(self.handle_dropdown_change)
-
-        self.corner_layout.addWidget(level_label)
-        self.corner_layout.addWidget(self.level_dropdown)
-        self.setCornerWidget(self.corner_container, Qt.TopLeftCorner)
 
     def is_folder_empty(self, directory: Path):
         """Checks if a directory exists and contains any HTML files."""
@@ -81,8 +68,9 @@ class NavigationBar(qt.QTabWidget):
             if device_data_exists:
                 dev_btn = qt.QPushButton("Continue Device Level Analysis")
                 dev_btn.setFixedSize(300, 45)
+                # We pass the mode value specifically
                 dev_btn.clicked.connect(
-                    lambda: self.update_tabs_by_level("Device Level")
+                    lambda: self.update_tabs_by_level(Mode.DEVICE.value)
                 )
                 layout.addWidget(dev_btn, alignment=Qt.AlignCenter)
 
@@ -90,7 +78,7 @@ class NavigationBar(qt.QTabWidget):
                 stack_btn = qt.QPushButton("Continue Stack Level Analysis")
                 stack_btn.setFixedSize(300, 45)
                 stack_btn.clicked.connect(
-                    lambda: self.update_tabs_by_level("Stack Level")
+                    lambda: self.update_tabs_by_level(Mode.STACK.value)
                 )
                 layout.addWidget(stack_btn, alignment=Qt.AlignCenter)
 
@@ -98,11 +86,16 @@ class NavigationBar(qt.QTabWidget):
 
         self.addTab(welcome_widget, "Start")
 
-    def handle_dropdown_change(self):
-        self.update_tabs_by_level(self.level_dropdown.currentText())
-
-    def update_tabs_by_level(self, level_text):
+    def update_tabs_by_level(self, level_text=None):
+        """
+        Populates tabs based on the requested level.
+        If level_text is None, it defaults to the MEMRISTOR_MODE environment variable.
+        """
         self.clear()
+
+        # Fallback to environment variable if no text is provided
+        if level_text is None:
+            level_text = os.environ.get("MEMRISTOR_MODE", Mode.DEVICE.value)
 
         param_labels = {
             "V_set": "V Set",
@@ -127,9 +120,8 @@ class NavigationBar(qt.QTabWidget):
             "V_set_vs_V_reset": "Vset vs Vreset",
         }
 
-        if level_text == "Device Level":
+        if level_text == Mode.DEVICE.value:
             base_dir = self.temp_device_dir
-
             char_labels = {"AI": "Current (A)", "NORM_COND": "Conductance (S)"}
 
             self.addTab(
@@ -143,8 +135,7 @@ class NavigationBar(qt.QTabWidget):
                 "Endurance Boxplots",
             )
             self.addTab(
-                self._create_nested_tab(base_dir, "cdfs", param_labels),
-                "Endurance CDF",
+                self._create_nested_tab(base_dir, "cdfs", param_labels), "Endurance CDF"
             )
             self.addTab(
                 self._create_nested_tab(base_dir, "characteristic_plots", char_labels),
@@ -163,9 +154,8 @@ class NavigationBar(qt.QTabWidget):
                 "Device Matrix",
             )
 
-        elif level_text == "Stack Level":
+        elif level_text == Mode.STACK.value:
             base_dir = self.temp_stack_dir
-
             char_labels = {
                 "AI": "Current (A)",
                 "NORM_COND": "Conductance (S)",
@@ -183,17 +173,13 @@ class NavigationBar(qt.QTabWidget):
                 "Endurance",
             )
             self.addTab(
-                self._create_nested_tab(base_dir, "boxplots", param_labels),
-                "Boxplots",
+                self._create_nested_tab(base_dir, "boxplots", param_labels), "Boxplots"
             )
             self.addTab(
                 self._create_nested_tab(base_dir, "boxplots_stack_level", param_labels),
                 "Stack Boxplots",
             )
-            self.addTab(
-                self._create_nested_tab(base_dir, "cdfs", param_labels),
-                "CDF",
-            )
+            self.addTab(self._create_nested_tab(base_dir, "cdfs", param_labels), "CDF")
             self.addTab(
                 self._create_nested_tab(base_dir, "cdfs_stack_level", param_labels),
                 "Stack CDF",
@@ -228,11 +214,11 @@ class NavigationBar(qt.QTabWidget):
             )
 
     def _discover_labels(self, folder: Path) -> dict:
-        """Auto-discover HTML files in a folder and build a labels map from filenames."""
+        """Auto-discover HTML files in a folder and build a labels map."""
         if not folder.exists():
             return {}
         return {
-            f.stem: f.stem.replace("corr_matrix_", "").replace("_", " ")
+            f.stem: f.stem.replace("corr_matrix_", "").replace("_", " ").title()
             for f in sorted(folder.glob("*.html"))
         }
 
@@ -262,7 +248,6 @@ class NavigationBar(qt.QTabWidget):
         return sub_tab_widget
 
     def get_current_viewer(self) -> PlotViewer:
-        """Returns the active PlotViewer even if nested inside another TabWidget."""
         widget = self.currentWidget()
         if isinstance(widget, PlotViewer):
             return widget
@@ -273,7 +258,6 @@ class NavigationBar(qt.QTabWidget):
         return None
 
     def get_all_viewers(self) -> list[PlotViewer]:
-        """Returns all PlotViewers currently instantiated."""
         viewers = []
         for i in range(self.count()):
             widget = self.widget(i)
