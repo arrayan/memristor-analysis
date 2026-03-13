@@ -33,7 +33,7 @@ def build_stack_level_correlation_matrix_figs(
     figures = []
 
     for device in devices:
-        device_sets = find_device_sets(scatter_df, device)
+        device_sets = find_device_sets(scatter_df, device, stack_id=stack_id)
 
         # aggregate all data from a device
         df_device = scatter_df[scatter_df["source_file"].isin(device_sets)].copy()
@@ -82,11 +82,10 @@ def build_stack_level_correlation_matrix_figs(
 
         figures.append(fig)
 
-    df_all = scatter_df[
-        scatter_df["source_file"].isin(
-            [s for d in devices for s in scatter_df["source_file"].unique() if d in s]
-        )
-    ].copy()
+    all_device_sets = [
+        s for d in devices for s in find_device_sets(scatter_df, d, stack_id=stack_id)
+    ]
+    df_all = scatter_df[scatter_df["source_file"].isin(all_device_sets)].copy()
 
     if not df_all.empty:
         df_numeric_all = df_all[available_params].apply(pd.to_numeric, errors="coerce")
