@@ -31,9 +31,9 @@ class ImportWorker(QObject):
             if temp_folder.exists():
                 try:
                     # Attempt to delete the directory
-                    shutil.rmtree(target_temp_dir)
+                    shutil.rmtree(temp_dir)
                 except Exception as e:
-                    # If deletion fails raise a user-friendly error
+                    # If deletion fails, raise a user-friendly error
                     raise RuntimeError(
                         f"Could not clear the temporary folder for {self.mode.value}.\n\n"
                         f"Reason: {str(e)}\n\n"
