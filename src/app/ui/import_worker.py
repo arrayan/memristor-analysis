@@ -28,7 +28,7 @@ class ImportWorker(QObject):
 
             temp_dir = TEMP_DIR / self.mode.value
             # remove old temp data
-            if temp_folder.exists():
+            if temp_dir.exists():
                 try:
                     # Attempt to delete the directory
                     shutil.rmtree(temp_dir)
