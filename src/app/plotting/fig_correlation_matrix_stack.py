@@ -132,11 +132,13 @@ def build_stack_level_correlation_matrix_figs(
         corr_matrix_all = df_numeric_all.corr()
 
         if not corr_matrix_all.empty:
+            all_cols = corr_matrix_all.columns.tolist()
+            all_labels = [param_labels.get(p, p) for p in all_cols]
             fig_all = go.Figure(
                 data=go.Heatmap(
                     z=corr_matrix_all.values,
-                    x=[param_labels.get(p, p) for p in available_params],
-                    y=[param_labels.get(p, p) for p in available_params],
+                    x=all_labels,
+                    y=all_labels,
                     zmin=-1,
                     zmax=1,
                     colorscale="RdBu_r",
