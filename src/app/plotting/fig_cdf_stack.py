@@ -7,10 +7,11 @@ from .utils import has_valid_data, find_device_sets, log_axis_config
 
 
 def build_stack_level_cdf_figs(
-    cdf_table: "pd.DataFrame",
-    stack_id: str,
-    devices: list[str],
-    leakage_i_by_device: "dict[str, float] | None" = None,
+        cdf_table: "pd.DataFrame",
+        stack_id: str,
+        devices: list[str],
+        leakage_i_by_device: "dict[str, float] | None" = None,
+        v_read: float = 0.2,
 ) -> list[go.Figure]:
     """
     Stack-Level CDFs: one curve per device (aggregated) PLUS a unified
@@ -29,14 +30,12 @@ def build_stack_level_cdf_figs(
         "I_leakage_pristine": {"pretty": "I_leakage pristine (A)", "scale": "log"},
     }
 
-    V_READ = 0.2
-
     # Build per-device R_pristine scalar dict
     r_pristine_by_device: dict[str, float] = {}
     if leakage_i_by_device:
         for device, il in leakage_i_by_device.items():
             if il is not None and abs(il) > 0:
-                r_pristine_by_device[device] = V_READ / abs(il)
+                r_pristine_by_device[device] = v_read / abs(il)
 
     if "R_pristine" not in param_map and r_pristine_by_device:
         param_map["R_pristine"] = {"pretty": "R_pristine (Ω)", "scale": "log"}
@@ -143,7 +142,7 @@ def build_stack_level_cdf_figs(
         )
 
         fig.update_layout(
-            title=f"Stack {stack_id} – CDF {info['pretty']} ({info['scale'].capitalize()} Scale)",
+            title=f"Stack {stack_id} – CDF {info['pretty']} ({info['scale'].capitalize()} Scale) | Device-Level",
             width=900,
             height=600,
             template="plotly_white",

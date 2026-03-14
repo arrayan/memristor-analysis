@@ -7,10 +7,11 @@ from .utils import has_valid_data, find_device_sets
 
 
 def build_stack_level_boxplots(
-    box_table: pd.DataFrame,
-    stack_id: str,
-    devices: list[str],
-    leakage_i_by_device: "dict[str, float] | None" = None,
+        box_table: pd.DataFrame,
+        stack_id: str,
+        devices: list[str],
+        leakage_i_by_device: "dict[str, float] | None" = None,
+        v_read: float = 0.2,
 ) -> list[go.Figure]:
     """
     Stack-Level Boxplots: one box per device (aggregated) PLUS a unified
@@ -29,14 +30,12 @@ def build_stack_level_boxplots(
         "I_leakage_pristine": {"pretty": "I_leakage pristine (A)", "scale": "log"},
     }
 
-    V_READ = 0.2
-
     # Build per-device R_pristine scalar dict
     r_pristine_by_device: dict[str, float] = {}
     if leakage_i_by_device:
         for device, il in leakage_i_by_device.items():
             if il is not None and abs(il) > 0:
-                r_pristine_by_device[device] = V_READ / abs(il)
+                r_pristine_by_device[device] = v_read / abs(il)
 
     if "R_pristine" not in param_map and r_pristine_by_device:
         param_map["R_pristine"] = {"pretty": "R_pristine (Ω)", "scale": "log"}
@@ -44,7 +43,7 @@ def build_stack_level_boxplots(
     cols = px.colors.sample_colorscale("Viridis", max(len(devices), 2))
     color_map = {d: cols[i] for i, d in enumerate(devices)}
 
-    tick_vals = [10.0**i for i in range(-15, 16)]
+    tick_vals = [10.0 ** i for i in range(-15, 16)]
     tick_text = [f"1e{i}" if i != 0 else "1" for i in range(-15, 16)]
 
     figures = []

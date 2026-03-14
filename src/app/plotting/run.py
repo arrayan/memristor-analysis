@@ -130,6 +130,7 @@ def plot_stack(
             stack_id=stack_id,
             devices=devices,
             leakage_i_by_device=data.leakage_i_by_device,
+            v_read=data.v_read,
         )
         for fig in stack_cdf_figs:
             pid = fig.layout.meta.get("param_id")
@@ -148,6 +149,7 @@ def plot_stack(
             stack_id=stack_id,
             devices=devices,
             leakage_i_by_device=data.leakage_i_by_device,
+            v_read=data.v_read,
         )
         for fig in stack_figs:
             pid = fig.layout.meta.get("param_id")
@@ -156,7 +158,7 @@ def plot_stack(
 
     write_stack_level_boxplots()
 
-    # Correlation scatter (stack)
+    # Correlation scatter
     def write_correlation_scatter_figs():
         stack_corr_dir = cfg.output_dir / "correlation_plots_stack_level"
         stack_corr_dir.mkdir(parents=True, exist_ok=True)
@@ -168,6 +170,7 @@ def plot_stack(
             forming_v_by_device=data.forming_v_by_device,
             leakage_i_by_device=data.leakage_i_by_device,
             first_v_reset=data.first_v_reset,
+            v_read=data.v_read,
         )
         for fig in stack_corr_figs:
             pid = fig.layout.meta.get("param_id")
@@ -176,7 +179,7 @@ def plot_stack(
 
     write_correlation_scatter_figs()
 
-    # Correlation matrix (stack)
+    # Correlation matrix
     def write_correlation_matrix_figs():
         stack_matrix_dir = cfg.output_dir / "correlation_matrices_stack_level"
         stack_matrix_dir.mkdir(parents=True, exist_ok=True)
@@ -188,6 +191,7 @@ def plot_stack(
             forming_v_by_device=data.forming_v_by_device,
             leakage_i_by_device=data.leakage_i_by_device,
             first_v_reset=data.first_v_reset,
+            v_read=data.v_read,
         )
         for fig in stack_matrix_figs:
             pid = fig.layout.meta.get("param_id")

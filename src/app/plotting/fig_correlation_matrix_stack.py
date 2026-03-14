@@ -6,12 +6,13 @@ from .utils import has_valid_data, find_device_sets
 
 
 def build_stack_level_correlation_matrix_figs(
-    scatter_df: "pd.DataFrame",
-    stack_id: str,
-    devices: list[str],
-    forming_v_by_device: "dict[str, float] | None" = None,
-    leakage_i_by_device: "dict[str, float] | None" = None,
-    first_v_reset: "dict[str, float] | None" = None,
+        scatter_df: "pd.DataFrame",
+        stack_id: str,
+        devices: list[str],
+        forming_v_by_device: "dict[str, float] | None" = None,
+        leakage_i_by_device: "dict[str, float] | None" = None,
+        v_read: float = 0.2,
+        first_v_reset: "dict[str, float] | None" = None,
 ) -> list[go.Figure]:
     """
     Stack-Level: Correlation matrix heatmap (one per device).
@@ -96,7 +97,6 @@ def build_stack_level_correlation_matrix_figs(
         df_numeric_all = df_all[available_params].apply(pd.to_numeric, errors="coerce")
 
         # Add scalar params per device (one value per device, repeated for all cycles)
-        V_READ = 0.2
 
         from pathlib import Path
 
@@ -119,9 +119,9 @@ def build_stack_level_correlation_matrix_figs(
                 lambda sf: leakage_i_by_device.get(_device(sf))
             )
             df_numeric_all["R_pristine"] = df_all["source_file"].map(
-                lambda sf: (V_READ / abs(leakage_i_by_device[_device(sf)]))
+                lambda sf: (v_read / abs(leakage_i_by_device[_device(sf)]))
                 if _device(sf) in leakage_i_by_device
-                and abs(leakage_i_by_device[_device(sf)]) > 0
+                   and abs(leakage_i_by_device[_device(sf)]) > 0
                 else None
             )
         if first_v_reset:

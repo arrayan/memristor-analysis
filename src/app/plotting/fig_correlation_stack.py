@@ -7,12 +7,13 @@ from .utils import has_valid_data, find_device_sets
 
 
 def build_stack_level_correlation_figs(
-    scatter_df: "pd.DataFrame",
-    stack_id: str,
-    devices: list[str],
-    forming_v_by_device: "dict[str, float] | None" = None,
-    leakage_i_by_device: "dict[str, float] | None" = None,
-    first_v_reset: "dict[str, float] | None" = None,
+        scatter_df: "pd.DataFrame",
+        stack_id: str,
+        devices: list[str],
+        forming_v_by_device: "dict[str, float] | None" = None,
+        leakage_i_by_device: "dict[str, float] | None" = None,
+        v_read: float = 0.2,
+        first_v_reset: "dict[str, float] | None" = None,
 ) -> list[go.Figure]:
     """
     Stack-Level: Correlation scatter plots (one per pair).
@@ -41,11 +42,10 @@ def build_stack_level_correlation_figs(
     base_cols = px.colors.qualitative.Plotly
     device_color_map = {d: base_cols[i % len(base_cols)] for i, d in enumerate(devices)}
 
-    tick_vals = [10.0**i for i in range(-15, 16)]
+    tick_vals = [10.0 ** i for i in range(-15, 16)]
     tick_text = [f"1e{i}" if i != 0 else "1" for i in range(-15, 16)]
 
     # V_read = 0.2 V (consistent with R_LRS / R_HRS computation)
-    V_READ = 0.2
 
     # Build a per-device scalar DataFrame – one row per device, one point per pair
     scalar_rows = []
@@ -59,7 +59,7 @@ def build_stack_level_correlation_figs(
             il = leakage_i_by_device.get(device)
             if il is not None and abs(il) > 0:
                 row["I_leakage_pristine"] = abs(il)
-                row["R_pristine"] = V_READ / abs(il)
+                row["R_pristine"] = v_read / abs(il)
         if first_v_reset:
             fvr = first_v_reset.get(device)
             if fvr is not None:
