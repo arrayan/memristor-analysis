@@ -7,11 +7,11 @@ from .utils import has_valid_data, find_device_sets
 
 
 def build_stack_level_boxplots(
-        box_table: pd.DataFrame,
-        stack_id: str,
-        devices: list[str],
-        leakage_i_by_device: "dict[str, float] | None" = None,
-        v_read: float = 0.2,
+    box_table: pd.DataFrame,
+    stack_id: str,
+    devices: list[str],
+    leakage_i_by_device: "dict[str, float] | None" = None,
+    v_read: float = 0.2,
 ) -> list[go.Figure]:
     """
     Stack-Level Boxplots: one box per device (aggregated) PLUS a unified
@@ -43,7 +43,7 @@ def build_stack_level_boxplots(
     cols = px.colors.sample_colorscale("Viridis", max(len(devices), 2))
     color_map = {d: cols[i] for i, d in enumerate(devices)}
 
-    tick_vals = [10.0 ** i for i in range(-15, 16)]
+    tick_vals = [10.0**i for i in range(-15, 16)]
     tick_text = [f"1e{i}" if i != 0 else "1" for i in range(-15, 16)]
 
     figures = []
@@ -98,7 +98,9 @@ def build_stack_level_boxplots(
         # Unified "All Devices" box — entire stack as one dataset
         if is_scalar_param:
             all_scalar_vals = pd.Series(list(r_pristine_by_device.values()))
-            all_vals = all_scalar_vals[all_scalar_vals > 0] if is_log else all_scalar_vals
+            all_vals = (
+                all_scalar_vals[all_scalar_vals > 0] if is_log else all_scalar_vals
+            )
         else:
             if param not in box_table.columns:
                 continue

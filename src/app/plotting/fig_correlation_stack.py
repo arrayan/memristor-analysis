@@ -7,13 +7,13 @@ from .utils import has_valid_data, find_device_sets
 
 
 def build_stack_level_correlation_figs(
-        scatter_df: "pd.DataFrame",
-        stack_id: str,
-        devices: list[str],
-        forming_v_by_device: "dict[str, float] | None" = None,
-        leakage_i_by_device: "dict[str, float] | None" = None,
-        v_read: float = 0.2,
-        first_v_reset: "dict[str, float] | None" = None,
+    scatter_df: "pd.DataFrame",
+    stack_id: str,
+    devices: list[str],
+    forming_v_by_device: "dict[str, float] | None" = None,
+    leakage_i_by_device: "dict[str, float] | None" = None,
+    v_read: float = 0.2,
+    first_v_reset: "dict[str, float] | None" = None,
 ) -> list[go.Figure]:
     """
     Stack-Level: Correlation scatter plots (one per pair).
@@ -42,7 +42,7 @@ def build_stack_level_correlation_figs(
     base_cols = px.colors.qualitative.Plotly
     device_color_map = {d: base_cols[i % len(base_cols)] for i, d in enumerate(devices)}
 
-    tick_vals = [10.0 ** i for i in range(-15, 16)]
+    tick_vals = [10.0**i for i in range(-15, 16)]
     tick_text = [f"1e{i}" if i != 0 else "1" for i in range(-15, 16)]
 
     # V_read = 0.2 V (consistent with R_LRS / R_HRS computation)
@@ -75,7 +75,11 @@ def build_stack_level_correlation_figs(
         )
     if {"I_leakage_pristine", "V_forming"}.issubset(scalar_df.columns):
         scalar_pairs.append(
-            ("I_leakage_pristine", "V_forming", "I_leakage pristine (A) vs V_forming (V)")
+            (
+                "I_leakage_pristine",
+                "V_forming",
+                "I_leakage pristine (A) vs V_forming (V)",
+            )
         )
     if {"R_pristine", "V_forming"}.issubset(scalar_df.columns):
         scalar_pairs.append(

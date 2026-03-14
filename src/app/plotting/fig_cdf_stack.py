@@ -7,11 +7,11 @@ from .utils import has_valid_data, find_device_sets, log_axis_config
 
 
 def build_stack_level_cdf_figs(
-        cdf_table: "pd.DataFrame",
-        stack_id: str,
-        devices: list[str],
-        leakage_i_by_device: "dict[str, float] | None" = None,
-        v_read: float = 0.2,
+    cdf_table: "pd.DataFrame",
+    stack_id: str,
+    devices: list[str],
+    leakage_i_by_device: "dict[str, float] | None" = None,
+    v_read: float = 0.2,
 ) -> list[go.Figure]:
     """
     Stack-Level CDFs: one curve per device (aggregated) PLUS a unified
@@ -63,6 +63,7 @@ def build_stack_level_cdf_figs(
                 if val is None:
                     continue
                 import numpy as np
+
                 x = np.array([val])
                 y = np.array([100.0])
             else:
@@ -90,6 +91,7 @@ def build_stack_level_cdf_figs(
         # Unified "All Devices" curve — entire stack as one dataset
         if is_scalar_param:
             import numpy as np
+
             all_scalar = sorted(r_pristine_by_device.values())
             x_all = np.array(all_scalar)
             y_all = (np.arange(1, len(x_all) + 1) / len(x_all)) * 100.0

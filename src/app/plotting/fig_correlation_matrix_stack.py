@@ -6,13 +6,13 @@ from .utils import has_valid_data, find_device_sets
 
 
 def build_stack_level_correlation_matrix_figs(
-        scatter_df: "pd.DataFrame",
-        stack_id: str,
-        devices: list[str],
-        forming_v_by_device: "dict[str, float] | None" = None,
-        leakage_i_by_device: "dict[str, float] | None" = None,
-        v_read: float = 0.2,
-        first_v_reset: "dict[str, float] | None" = None,
+    scatter_df: "pd.DataFrame",
+    stack_id: str,
+    devices: list[str],
+    forming_v_by_device: "dict[str, float] | None" = None,
+    leakage_i_by_device: "dict[str, float] | None" = None,
+    v_read: float = 0.2,
+    first_v_reset: "dict[str, float] | None" = None,
 ) -> list[go.Figure]:
     """
     Stack-Level: Correlation matrix heatmap (one per device).
@@ -104,7 +104,7 @@ def build_stack_level_correlation_matrix_figs(
             """Extract device from source_file using stack_id prefix if available."""
             stem = Path(sf).stem
             if stack_id and stem.startswith(f"{stack_id}_"):
-                remainder = stem[len(stack_id) + 1:]
+                remainder = stem[len(stack_id) + 1 :]
                 parts = remainder.split("_")
                 return parts[0] if parts else stem
             parts = stem.split("_")
@@ -119,10 +119,12 @@ def build_stack_level_correlation_matrix_figs(
                 lambda sf: leakage_i_by_device.get(_device(sf))
             )
             df_numeric_all["R_pristine"] = df_all["source_file"].map(
-                lambda sf: (v_read / abs(leakage_i_by_device[_device(sf)]))
-                if _device(sf) in leakage_i_by_device
-                   and abs(leakage_i_by_device[_device(sf)]) > 0
-                else None
+                lambda sf: (
+                    (v_read / abs(leakage_i_by_device[_device(sf)]))
+                    if _device(sf) in leakage_i_by_device
+                    and abs(leakage_i_by_device[_device(sf)]) > 0
+                    else None
+                )
             )
         if first_v_reset:
             df_numeric_all["first_V_reset"] = df_all["source_file"].map(
