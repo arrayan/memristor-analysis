@@ -111,7 +111,7 @@ def build_stack_level_cdf_figs(
         )
 
         fig.update_layout(
-            title=f"Stack {stack_id} – CDF {info['pretty']} ({info['scale'].capitalize()} Scale) | Device-Level",
+            title=f"Stack {stack_id} – CDF {info['pretty']} ({info['scale'].capitalize()} Scale)",
             width=900,
             height=600,
             template="plotly_white",
