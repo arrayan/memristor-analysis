@@ -2,8 +2,8 @@ import duckdb
 from pathlib import Path
 from app.converter.models import ProcessingResult
 
-class DuckDBFileProcessor:
 
+class DuckDBFileProcessor:
     def __init__(self, output_path):
         self.output_path = output_path
 

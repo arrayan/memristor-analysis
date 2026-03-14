@@ -51,5 +51,7 @@ class FormatConverter:
             data_frame.write_excel(output_path)
 
         else:
-            raise ValueError(f"Unsupported output format '{suffix}'. " "Supported formats are: .csv, .txt, .xlsx")
-
+            raise ValueError(
+                f"Unsupported output format '{suffix}'. "
+                "Supported formats are: .csv, .txt, .xlsx"
+            )
