@@ -118,6 +118,9 @@ class NavigationBar(qt.QTabWidget):
             "V_reset_vs_R_LRS": "Vreset vs RLRS",
             "V_reset_vs_I_reset_max": "Vreset vs Ireset",
             "V_set_vs_V_reset": "Vset vs Vreset",
+            "V_forming_vs_first_V_reset": "Forming vs 1st Reset",
+            "I_leakage_pristine_vs_V_forming": "Leakage vs Forming",
+            "R_pristine_vs_V_forming": "R Pristine vs Forming"
         }
 
         if level_text == Mode.DEVICE.value:
