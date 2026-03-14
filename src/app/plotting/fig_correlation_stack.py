@@ -7,11 +7,21 @@ from .utils import has_valid_data, find_device_sets
 
 
 def build_stack_level_correlation_figs(
-    scatter_df: "pd.DataFrame", stack_id: str, devices: list[str]
+    scatter_df: "pd.DataFrame",
+    stack_id: str,
+    devices: list[str],
+    forming_v_by_device: "dict[str, float] | None" = None,
+    leakage_i_by_device: "dict[str, float] | None" = None,
+    first_v_reset: "dict[str, float] | None" = None,
 ) -> list[go.Figure]:
     """
     Stack-Level: Correlation scatter plots (one per pair).
     Every device aggregates his endurance-sets.
+
+    Single-point pairs (one point per device):
+      - V_forming vs 1st V_reset
+      - I_leakage_pristine vs V_forming
+      - R_pristine (= V_read / I_leakage) vs V_forming
     """
     if not has_valid_data(scatter_df, devices):
         return []
@@ -34,48 +44,118 @@ def build_stack_level_correlation_figs(
     tick_vals = [10.0**i for i in range(-15, 16)]
     tick_text = [f"1e{i}" if i != 0 else "1" for i in range(-15, 16)]
 
+    # V_read = 0.2 V (consistent with R_LRS / R_HRS computation)
+    V_READ = 0.2
+
+    # Build a per-device scalar DataFrame – one row per device, one point per pair
+    scalar_rows = []
+    for device in devices:
+        row: dict = {"device": device}
+        if forming_v_by_device:
+            vf = forming_v_by_device.get(device)
+            if vf is not None:
+                row["V_forming"] = vf
+        if leakage_i_by_device:
+            il = leakage_i_by_device.get(device)
+            if il is not None and abs(il) > 0:
+                row["I_leakage_pristine"] = abs(il)
+                row["R_pristine"] = V_READ / abs(il)
+        if first_v_reset:
+            fvr = first_v_reset.get(device)
+            if fvr is not None:
+                row["first_V_reset"] = fvr
+        scalar_rows.append(row)
+    scalar_df = pd.DataFrame(scalar_rows)
+
+    # Only add a scalar pair when both required columns are present
+    scalar_pairs: list[tuple[str, str, str]] = []
+    if {"V_forming", "first_V_reset"}.issubset(scalar_df.columns):
+        scalar_pairs.append(
+            ("V_forming", "first_V_reset", "V_forming (V) vs 1st V_reset (V)")
+        )
+    if {"I_leakage_pristine", "V_forming"}.issubset(scalar_df.columns):
+        scalar_pairs.append(
+            ("I_leakage_pristine", "V_forming", "I_leakage pristine (A) vs V_forming (V)")
+        )
+    if {"R_pristine", "V_forming"}.issubset(scalar_df.columns):
+        scalar_pairs.append(
+            ("R_pristine", "V_forming", "R_pristine (Ω) vs V_forming (V)")
+        )
+
     figures = []
 
-    for x_col, y_col, title_text in pairs:
+    for x_col, y_col, title_text in pairs + scalar_pairs:
+        is_scalar_pair = (x_col, y_col, title_text) in scalar_pairs
         fig = go.Figure()
         x_scale = get_scale(x_col)
         y_scale = get_scale(y_col)
 
         all_x, all_y = [], []
 
-        for device in devices:
-            device_sets = find_device_sets(scatter_df, device, stack_id=stack_id)
-
-            # aggregate
-            df_device = scatter_df[scatter_df["source_file"].isin(device_sets)].copy()
-            if df_device.empty:
-                continue
-
-            # data cleaning
-            for col, scale in [(x_col, x_scale), (y_col, y_scale)]:
-                df_device[col] = pd.to_numeric(df_device[col], errors="coerce")
-                if scale == "log":
-                    df_device[col] = df_device[col].abs()
-                    df_device.loc[df_device[col] <= 0, col] = np.nan
-
-            df_plot = df_device.dropna(subset=[x_col, y_col])
-            if df_plot.empty:
-                continue
-
-            all_x.extend(df_plot[x_col].tolist())
-            all_y.extend(df_plot[y_col].tolist())
-
-            fig.add_trace(
-                go.Scatter(
-                    x=df_plot[x_col],
-                    y=df_plot[y_col],
-                    mode="markers",
-                    marker=dict(color=device_color_map[device], size=7, opacity=0.7),
-                    name=device,
-                    legendgroup=device,
-                    hovertemplate=f"Device: {device}<br>{x_col}: %{{x}}<br>{y_col}: %{{y}}<extra></extra>",
+        if is_scalar_pair:
+            # One point per device from scalar_df
+            df_s = scalar_df.dropna(subset=[x_col, y_col])
+            for _, row in df_s.iterrows():
+                device = row["device"]
+                x_val = float(row[x_col])
+                y_val = float(row[y_col])
+                all_x.append(x_val)
+                all_y.append(y_val)
+                fig.add_trace(
+                    go.Scatter(
+                        x=[x_val],
+                        y=[y_val],
+                        mode="markers",
+                        marker=dict(
+                            color=device_color_map.get(device), size=10, opacity=0.9
+                        ),
+                        name=device,
+                        legendgroup=device,
+                        hovertemplate=(
+                            f"Device: {device}<br>"
+                            f"{x_col}: %{{x}}<br>"
+                            f"{y_col}: %{{y}}<extra></extra>"
+                        ),
+                    )
                 )
-            )
+        else:
+            for device in devices:
+                device_sets = find_device_sets(scatter_df, device, stack_id=stack_id)
+
+                # aggregate
+                df_device = scatter_df[
+                    scatter_df["source_file"].isin(device_sets)
+                ].copy()
+                if df_device.empty:
+                    continue
+
+                # data cleaning
+                for col, scale in [(x_col, x_scale), (y_col, y_scale)]:
+                    df_device[col] = pd.to_numeric(df_device[col], errors="coerce")
+                    if scale == "log":
+                        df_device[col] = df_device[col].abs()
+                        df_device.loc[df_device[col] <= 0, col] = np.nan
+
+                df_plot = df_device.dropna(subset=[x_col, y_col])
+                if df_plot.empty:
+                    continue
+
+                all_x.extend(df_plot[x_col].tolist())
+                all_y.extend(df_plot[y_col].tolist())
+
+                fig.add_trace(
+                    go.Scatter(
+                        x=df_plot[x_col],
+                        y=df_plot[y_col],
+                        mode="markers",
+                        marker=dict(
+                            color=device_color_map[device], size=7, opacity=0.7
+                        ),
+                        name=device,
+                        legendgroup=device,
+                        hovertemplate=f"Device: {device}<br>{x_col}: %{{x}}<br>{y_col}: %{{y}}<extra></extra>",
+                    )
+                )
 
         # axis
         for axis_name, col, scale, all_vals in [

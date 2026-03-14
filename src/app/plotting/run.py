@@ -163,6 +163,9 @@ def plot_stack(
             scatter_df=data.scatter_df,
             stack_id=stack_id,
             devices=devices,
+            forming_v_by_device=data.forming_v_by_device,
+            leakage_i_by_device=data.leakage_i_by_device,
+            first_v_reset=data.first_v_reset,
         )
         for fig in stack_corr_figs:
             pid = fig.layout.meta.get("param_id")

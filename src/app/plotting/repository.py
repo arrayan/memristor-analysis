@@ -126,14 +126,15 @@ class MemristorRepository:
         leakage_like: str = "%leakage%",
     ) -> dict[str, float]:
         """
-        Per-device leakage current: MAX(|AI|) from each device's leakage file.
+        Per-device leakage current: MAX(ILEAKAGE) from each device's leakage file.
+        Reads the pre-computed ILEAKAGE column directly (value at +0.2V read voltage).
         Returns {device: I_leakage_pristine}.
         """
         result = {}
         for device in devices:
             df = self.conn.execute(
                 """
-                SELECT MAX(ABS(AI)) AS il
+                SELECT MAX(ILEAKAGE) AS il
                 FROM cycles
                 WHERE source_file ILIKE ?
                   AND device_row || CAST(device_col AS VARCHAR) = ?
@@ -145,6 +146,53 @@ class MemristorRepository:
                 if not pd.isna(val):
                     result[device] = float(val)
         return result
+
+    def load_first_v_reset(
+        self, endurance_reset_like: str = "%endurance_reset%"
+    ) -> dict[str, float]:
+        """
+        1st V_reset per device = VRESET from the very first reset cycle of the device.
+        "First" = MIN(source_file) to get the earliest file, then MIN(cycle_number)
+        within that file. Reads the pre-computed VRESET column directly.
+        Returns: {device: first_v_reset}
+        """
+        df = self.conn.execute(
+            """
+            WITH device_first_file AS (
+                SELECT device_row || CAST(device_col AS VARCHAR) AS device,
+                       MIN(source_file) AS first_file
+                FROM cycles
+                WHERE source_file ILIKE ?
+                GROUP BY device
+            ),
+            device_first_cycle AS (
+                SELECT dff.device,
+                       dff.first_file,
+                       MIN(c.cycle_number) AS first_cn
+                FROM cycles c
+                JOIN device_first_file dff ON c.source_file = dff.first_file
+                GROUP BY dff.device, dff.first_file
+            )
+            SELECT dfc.device,
+                   MAX(c.VRESET) AS first_v_reset
+            FROM cycles c
+            JOIN device_first_cycle dfc
+              ON c.source_file = dfc.first_file
+             AND c.cycle_number = dfc.first_cn
+            WHERE c.VRESET IS NOT NULL
+            GROUP BY dfc.device
+            """,
+            [endurance_reset_like],
+        ).df()
+
+        if df.empty:
+            return {}
+
+        return {
+            row["device"]: float(row["first_v_reset"])
+            for _, row in df.iterrows()
+            if not pd.isna(row["first_v_reset"]) and row["device"] is not None
+        }
 
     def load_forming_voltage_global(
         self, electroforming_like: str = "%electroforming%"
