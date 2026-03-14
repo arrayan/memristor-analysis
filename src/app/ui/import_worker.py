@@ -42,7 +42,7 @@ class ImportWorker(QObject):
                     )
 
             # recreate temp folder
-            temp_folder.mkdir(parents=True, exist_ok=True)
+            temp_dir.mkdir(parents=True, exist_ok=True)
 
             # --- STEP 1: Data Conversion (Importing to DuckDB) ---
             self.status_message.emit("Phase 1/2: Updating database from raw files...")
