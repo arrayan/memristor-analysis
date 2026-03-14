@@ -14,6 +14,23 @@ class MemristorRepository:
 
     conn: duckdb.DuckDBPyConnection
 
+    def get_stack_id(self) -> str | None:
+        row = self.conn.execute(
+            "SELECT DISTINCT stack_id FROM cycles LIMIT 1"
+        ).fetchone()
+        return row[0] if row else None
+
+    def list_devices(self) -> list[str]:
+        rows = self.conn.execute(
+            """
+            SELECT DISTINCT device_row || CAST(device_col AS VARCHAR) AS device
+            FROM cycles
+            WHERE device_row IS NOT NULL
+            ORDER BY device
+            """
+        ).fetchall()
+        return [r[0] for r in rows]
+
     def list_endurance_sets(self, endurance_like: str = "%endurance_set%") -> list[str]:
         rows = self.conn.execute(
             """
@@ -93,9 +110,9 @@ class MemristorRepository:
                 SELECT MAX(VFORM) AS vf
                 FROM cycles
                 WHERE source_file ILIKE ?
-                  AND source_file ILIKE ?
+                  AND device_row || CAST(device_col AS VARCHAR) = ?
                 """,
-                [electroforming_like, f"%{device}%"],
+                [electroforming_like, device],
             ).df()
             if not df.empty:
                 val = df["vf"].iloc[0]
@@ -119,9 +136,9 @@ class MemristorRepository:
                 SELECT MAX(ABS(AI)) AS il
                 FROM cycles
                 WHERE source_file ILIKE ?
-                  AND source_file ILIKE ?
+                  AND device_row || CAST(device_col AS VARCHAR) = ?
                 """,
-                [leakage_like, f"%{device}%"],
+                [leakage_like, device],
             ).df()
             if not df.empty:
                 val = df["il"].iloc[0]

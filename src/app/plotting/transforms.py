@@ -5,16 +5,28 @@ import pandas as pd
 from pathlib import Path
 
 
-def _device_from_source(source_file: str) -> str | None:
-    """Extract device name from source_file stem (e.g. H25098_A10_03_endurance_set → A10)."""
+def _device_from_source(source_file: str, stack_id: str = "") -> str | None:
+    """Extract device name from source_file by stripping the known stack_id prefix.
+
+    e.g. stack_id="H25094_b1", source_file="H25094_b1_B12_03_endurance_set" → "B12"
+    """
     stem = Path(source_file).stem
+    if stack_id and stem.startswith(f"{stack_id}_"):
+        remainder = stem[len(stack_id) + 1 :]
+        parts = remainder.split("_")
+        return parts[0] if parts and parts[0] else None
+    # fallback: first token after first underscore
     parts = stem.split("_")
     return parts[1] if len(parts) >= 2 else None
 
 
-def _map_per_device(source_files: pd.Series, device_map: dict[str, float]) -> pd.Series:
+def _map_per_device(
+    source_files: pd.Series, device_map: dict[str, float], stack_id: str = ""
+) -> pd.Series:
     """Map a per-device dict onto a Series of source_file strings."""
-    return source_files.map(lambda sf: device_map.get(_device_from_source(sf)))
+    return source_files.map(
+        lambda sf: device_map.get(_device_from_source(sf, stack_id))
+    )
 
 
 def compute_v_reset(df_reset: pd.DataFrame) -> pd.DataFrame:
@@ -91,6 +103,7 @@ def build_cdf_table(
     raw_by_reset: dict[str, pd.DataFrame],
     v_forming: float | None | dict[str, float],
     leakage_i: dict[str, float] | None = None,
+    stack_id: str = "",
 ) -> pd.DataFrame:
     """
     Produces table used by CDF plot.
@@ -136,13 +149,15 @@ def build_cdf_table(
 
     # V_forming — per-device dict or global scalar
     if isinstance(v_forming, dict):
-        out["V_forming"] = _map_per_device(out["source_file"], v_forming)
+        out["V_forming"] = _map_per_device(out["source_file"], v_forming, stack_id)
     else:
         out["V_forming"] = v_forming
 
     # I_leakage_pristine — per-device dict
     if leakage_i:
-        out["I_leakage_pristine"] = _map_per_device(out["source_file"], leakage_i)
+        out["I_leakage_pristine"] = _map_per_device(
+            out["source_file"], leakage_i, stack_id
+        )
 
     return out
 
@@ -152,8 +167,11 @@ def build_box_table(
     raw_by_reset: dict[str, pd.DataFrame],
     v_forming: float | None | dict[str, float],
     leakage_i: dict[str, float] | None = None,
+    stack_id: str = "",
 ) -> pd.DataFrame:
-    return build_cdf_table(classic_df, raw_by_reset, v_forming, leakage_i)
+    return build_cdf_table(
+        classic_df, raw_by_reset, v_forming, leakage_i, stack_id=stack_id
+    )
 
 
 def build_endurance_table(

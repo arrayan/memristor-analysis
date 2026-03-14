@@ -42,7 +42,7 @@ def build_stack_level_cdf_figs(
 
         # One curve per device (aggregated across all its sets)
         for device in devices:
-            device_sets = find_device_sets(cdf_table, device)
+            device_sets = find_device_sets(cdf_table, device, stack_id=stack_id)
             df_device = cdf_table[cdf_table["source_file"].isin(device_sets)]
             x, y = _cdf_xy(df_device[param], is_log=is_log)
 
