@@ -245,5 +245,7 @@ class MainWindow(qt.QMainWindow):
 
     def open_wiki(self):
         """Opens the GitHub Wiki in the default browser."""
-        url = QUrl("https://github.com/arrayan/memristor-analysis/wiki/Memristor-Analysis-Tool-Wiki")
+        url = QUrl(
+            "https://github.com/arrayan/memristor-analysis/wiki/Memristor-Analysis-Tool-Wiki"
+        )
         QDesktopServices.openUrl(url)

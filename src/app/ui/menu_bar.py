@@ -1,5 +1,5 @@
 import PySide6.QtWidgets as qt
-from PySide6.QtGui import QAction, QActionGroup
+from PySide6.QtGui import QAction
 from ..core import MenuAction
 
 
