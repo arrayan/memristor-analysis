@@ -3,7 +3,7 @@ import shutil
 from pathlib import Path
 
 from PySide6.QtCore import QObject, Signal, Slot
-from app.core.paths import DB_FILE, TEMP_FOLDER
+from app.core.paths import DB_FILE, TEMP_DIR
 from app.plotting.run import main as run_plotting_pipeline
 from app.core.modes import Mode
 
@@ -26,10 +26,20 @@ class ImportWorker(QObject):
             # set variable
             os.environ["MEMRISTOR_MODE"] = self.mode.value
 
-            temp_folder = TEMP_FOLDER / self.mode.value
+            temp_dir = TEMP_DIR / self.mode.value
             # remove old temp data
             if temp_folder.exists():
-                shutil.rmtree(temp_folder, ignore_errors=True)
+                try:
+                    # Attempt to delete the directory
+                    shutil.rmtree(target_temp_dir)
+                except Exception as e:
+                    # If deletion fails raise a user-friendly error
+                    raise RuntimeError(
+                        f"Could not clear the temporary folder for {self.mode.value}.\n\n"
+                        f"Reason: {str(e)}\n\n"
+                        "Please ensure no plot files are currently open in your browser "
+                        "or other applications, then try the import again."
+                    )
 
             # recreate temp folder
             temp_folder.mkdir(parents=True, exist_ok=True)
