@@ -28,7 +28,7 @@ class ExcelFileProcessor:
         start_time = time.time()
 
         try:
-            excel_file = fastexcel.read_excel(file_path)
+            excel_file = fastexcel.read_excel(str(file_path.resolve()))
             sheet_names = excel_file.sheet_names
 
             run_sheets = [

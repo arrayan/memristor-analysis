@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 import argparse
 
-from converter import convert_single, batch_convert, export_to_parquet
+from app.converter import convert_single, batch_convert, export_to_parquet
+from app.converter.format_converter import FormatConverter
+from pathlib import Path
 
 
 def main():
@@ -24,6 +26,15 @@ Examples:
   
   # Export to Parquet as well
   python cli.py "data/*.xlsx" --batch --parquet
+  
+  # Convert DuckDB to CSV
+  python cli.py data/file.duckdb --convert -o output.csv
+  
+  # Convert Parquet to TXT
+  python cli.py data/file.parquet --convert -o output.txt
+  
+  # Convert DuckDB to XLSX
+  python cli.py data/file.duckdb --convert -o output.xlsx
         """,
     )
     parser.add_argument(
@@ -55,29 +66,56 @@ Examples:
     parser.add_argument(
         "--parquet-dir", default="parquet_data", help="Directory for Parquet output"
     )
+    parser.add_argument(
+        "--convert",
+        action="store_true",
+        help="Convert parquet/duckdb to csv/txt/xlsx (independent mode)",
+    )
 
     args = parser.parse_args()
 
-    # Determine if batch or single file mode
-    if args.batch or len(args.excel_files) > 1:
-        # Batch mode
-        if len(args.excel_files) == 1 and (
-            "*" in args.excel_files[0] or "?" in args.excel_files[0]
-        ):
-            input_pattern = args.excel_files[0]
-        else:
-            input_pattern = args.excel_files  # List of files
+    if args.convert and args.parquet:
+        parser.error("parquet cannot be used with convert")
+    if args.convert and args.batch:
+        parser.error("batch cannot be used with convert")
+    if args.convert and args.workers is not None:
+        parser.error("workers cannot be used with convert")
+    if args.convert and args.no_parallel:
+        parser.error("no-parallel cannot be used with convert")
 
-        db_path = batch_convert(
-            input_pattern,
-            args.output,
-            exclude_sheets=None,
-        )
+    if args.convert:
+        input_file = Path(args.excel_files[0])
+        if not input_file.exists():
+            parser.error(f"File not found: {input_file}")
+
+        output_file = Path(args.output)
+
+        converter = FormatConverter()
+        converter.convert(input_file, output_file)
+
+        print(f"Converted {input_file} -> {output_file}")
+
     else:
-        db_path = convert_single(args.excel_files[0], args.output)
+        # Determine if batch or single file mode
+        if args.batch or len(args.excel_files) > 1:
+            # Batch mode
+            if len(args.excel_files) == 1 and (
+                "*" in args.excel_files[0] or "?" in args.excel_files[0]
+            ):
+                input_pattern = args.excel_files[0]
+            else:
+                input_pattern = args.excel_files  # List of files
 
-    if args.parquet:
-        export_to_parquet(db_path, args.parquet_dir)
+            db_path = batch_convert(
+                input_pattern,
+                args.output,
+                exclude_sheets=None,
+            )
+        else:
+            db_path = convert_single(args.excel_files[0], args.output)
+
+        if args.parquet:
+            export_to_parquet(db_path, args.parquet_dir)
 
 
 if __name__ == "__main__":

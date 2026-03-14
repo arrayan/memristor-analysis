@@ -16,6 +16,15 @@ __pycache__/
 output/
 *.html
 testing_recources/
+output.duckdb
+.idea/
+*.duckdb
+out.csv
+memristor_data.duckdb
+memristor.duckdb
+output.*
+out.*
+parquet_data/
 *.duckdb
 src/app/temp/
 *.png 
