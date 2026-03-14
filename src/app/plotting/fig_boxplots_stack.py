@@ -160,7 +160,7 @@ def build_stack_level_boxplots(
         fig.update_xaxes(title_text="Device", showgrid=True, gridcolor="#E5E5E5")
 
         fig.update_layout(
-            title=f"Stack {stack_id} – {info['pretty']} ({info['scale'].capitalize()} Scale) | Device-Level Aggregation",
+            title=f"Stack {stack_id} – {info['pretty']} ({info['scale'].capitalize()} Scale)",
             width=900,
             height=600,
             template="plotly_white",
