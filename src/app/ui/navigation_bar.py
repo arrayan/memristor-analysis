@@ -143,7 +143,7 @@ class NavigationBar(qt.QTabWidget):
             )
             self.addTab(
                 self._create_nested_tab(base_dir, "correlation_plots", corr_labels),
-                "Device Corr. Scatter",
+                "Corr. Scatter",
             )
             self.addTab(
                 self._create_nested_tab(
@@ -151,7 +151,7 @@ class NavigationBar(qt.QTabWidget):
                     "correlation_matrices",
                     self._discover_labels(base_dir / "correlation_matrices"),
                 ),
-                "Device Matrix",
+                "Corr. Matrix",
             )
 
         elif level_text == Mode.STACK.value:
@@ -163,45 +163,22 @@ class NavigationBar(qt.QTabWidget):
             }
 
             self.addTab(
-                self._create_nested_tab(base_dir, "characteristic_plots", char_labels),
-                "Char. Plots",
-            )
-            self.addTab(
-                self._create_nested_tab(
-                    base_dir, "endurance_performance", param_labels
-                ),
-                "Endurance",
-            )
-            self.addTab(
-                self._create_nested_tab(base_dir, "boxplots", param_labels), "Boxplots"
-            )
-            self.addTab(
                 self._create_nested_tab(base_dir, "boxplots_stack_level", param_labels),
-                "Stack Boxplots",
+                "Boxplots",
             )
-            self.addTab(self._create_nested_tab(base_dir, "cdfs", param_labels), "CDF")
+
             self.addTab(
                 self._create_nested_tab(base_dir, "cdfs_stack_level", param_labels),
-                "Stack CDF",
+                "CDF",
             )
-            self.addTab(
-                self._create_nested_tab(base_dir, "correlation_plots", corr_labels),
-                "Corr. Scatter",
-            )
+
             self.addTab(
                 self._create_nested_tab(
                     base_dir, "correlation_plots_stack_level", corr_labels
                 ),
-                "Stack Corr. Scatter",
+                "Corr. Scatter",
             )
-            self.addTab(
-                self._create_nested_tab(
-                    base_dir,
-                    "correlation_matrices",
-                    self._discover_labels(base_dir / "correlation_matrices"),
-                ),
-                "Matrix",
-            )
+
             self.addTab(
                 self._create_nested_tab(
                     base_dir,
@@ -210,7 +187,7 @@ class NavigationBar(qt.QTabWidget):
                         base_dir / "correlation_matrices_stack_level"
                     ),
                 ),
-                "Stack Matrix",
+                "Corr. Matrix",
             )
 
     def _discover_labels(self, folder: Path) -> dict:

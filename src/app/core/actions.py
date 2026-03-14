@@ -29,13 +29,8 @@ class MenuAction(Enum):
     # EXIT
     EXIT = ("Exit", "Ctrl+Q", False)
 
-    # OPTIONS MENU
-    SCALE_LINEAR = ("linear", None, True)
-    SCALE_LOG = ("log", None, True)
-
     # HELP MENU
     VIEW_HELP = ("View Help", "F1", False)
-    ABOUT = ("About", None, False)
 
     def __init__(self, text, shortcut=None, checkable=False):
         self.text = text
