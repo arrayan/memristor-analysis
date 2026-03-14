@@ -6,7 +6,12 @@ from .utils import has_valid_data, find_device_sets
 
 
 def build_stack_level_correlation_matrix_figs(
-    scatter_df: "pd.DataFrame", stack_id: str, devices: list[str]
+    scatter_df: "pd.DataFrame",
+    stack_id: str,
+    devices: list[str],
+    forming_v_by_device: "dict[str, float] | None" = None,
+    leakage_i_by_device: "dict[str, float] | None" = None,
+    first_v_reset: "dict[str, float] | None" = None,
 ) -> list[go.Figure]:
     """
     Stack-Level: Correlation matrix heatmap (one per device).
@@ -89,6 +94,41 @@ def build_stack_level_correlation_matrix_figs(
 
     if not df_all.empty:
         df_numeric_all = df_all[available_params].apply(pd.to_numeric, errors="coerce")
+
+        # Add scalar params per device (one value per device, repeated for all cycles)
+        V_READ = 0.2
+
+        from pathlib import Path
+
+        def _device(sf: str) -> str:
+            """Extract device from source_file using stack_id prefix if available."""
+            stem = Path(sf).stem
+            if stack_id and stem.startswith(f"{stack_id}_"):
+                remainder = stem[len(stack_id) + 1:]
+                parts = remainder.split("_")
+                return parts[0] if parts else stem
+            parts = stem.split("_")
+            return parts[1] if len(parts) >= 2 else stem
+
+        if forming_v_by_device:
+            df_numeric_all["V_forming"] = df_all["source_file"].map(
+                lambda sf: forming_v_by_device.get(_device(sf))
+            )
+        if leakage_i_by_device:
+            df_numeric_all["I_leakage_pristine"] = df_all["source_file"].map(
+                lambda sf: leakage_i_by_device.get(_device(sf))
+            )
+            df_numeric_all["R_pristine"] = df_all["source_file"].map(
+                lambda sf: (V_READ / abs(leakage_i_by_device[_device(sf)]))
+                if _device(sf) in leakage_i_by_device
+                and abs(leakage_i_by_device[_device(sf)]) > 0
+                else None
+            )
+        if first_v_reset:
+            df_numeric_all["first_V_reset"] = df_all["source_file"].map(
+                lambda sf: first_v_reset.get(_device(sf))
+            )
+
         corr_matrix_all = df_numeric_all.corr()
 
         if not corr_matrix_all.empty:

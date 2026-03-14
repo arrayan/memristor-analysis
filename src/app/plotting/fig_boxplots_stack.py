@@ -7,7 +7,10 @@ from .utils import has_valid_data, find_device_sets
 
 
 def build_stack_level_boxplots(
-    box_table: pd.DataFrame, stack_id: str, devices: list[str]
+    box_table: pd.DataFrame,
+    stack_id: str,
+    devices: list[str],
+    leakage_i_by_device: "dict[str, float] | None" = None,
 ) -> list[go.Figure]:
     """
     Stack-Level Boxplots: one box per device (aggregated) PLUS a unified
@@ -26,6 +29,18 @@ def build_stack_level_boxplots(
         "I_leakage_pristine": {"pretty": "I_leakage pristine (A)", "scale": "log"},
     }
 
+    V_READ = 0.2
+
+    # Build per-device R_pristine scalar dict
+    r_pristine_by_device: dict[str, float] = {}
+    if leakage_i_by_device:
+        for device, il in leakage_i_by_device.items():
+            if il is not None and abs(il) > 0:
+                r_pristine_by_device[device] = V_READ / abs(il)
+
+    if "R_pristine" not in param_map and r_pristine_by_device:
+        param_map["R_pristine"] = {"pretty": "R_pristine (Ω)", "scale": "log"}
+
     cols = px.colors.sample_colorscale("Viridis", max(len(devices), 2))
     color_map = {d: cols[i] for i, d in enumerate(devices)}
 
@@ -35,7 +50,7 @@ def build_stack_level_boxplots(
     figures = []
 
     for param, info in param_map.items():
-        if param not in box_table.columns:
+        if param != "R_pristine" and param not in box_table.columns:
             continue
 
         fig = go.Figure()
@@ -43,15 +58,25 @@ def build_stack_level_boxplots(
         has_any_data = False
         all_vals_for_param = []
 
+        is_scalar_param = param == "R_pristine"
+
         # One box per device (aggregated across all its sets)
         for device in devices:
-            device_sets = find_device_sets(box_table, device, stack_id=stack_id)
-            df_device = box_table[box_table["source_file"].isin(device_sets)]
-            vals = pd.to_numeric(df_device[param], errors="coerce").dropna()
-
-            if is_log:
-                vals = vals.abs()
-                vals = vals[vals > 0]
+            if is_scalar_param:
+                # R_pristine: single scalar value per device
+                val = r_pristine_by_device.get(device)
+                if val is None:
+                    continue
+                vals = pd.Series([val])
+            else:
+                if param not in box_table.columns:
+                    continue
+                device_sets = find_device_sets(box_table, device, stack_id=stack_id)
+                df_device = box_table[box_table["source_file"].isin(device_sets)]
+                vals = pd.to_numeric(df_device[param], errors="coerce").dropna()
+                if is_log:
+                    vals = vals.abs()
+                    vals = vals[vals > 0]
 
             if not vals.empty:
                 has_any_data = True
@@ -72,10 +97,16 @@ def build_stack_level_boxplots(
             )
 
         # Unified "All Devices" box — entire stack as one dataset
-        all_vals = pd.to_numeric(box_table[param], errors="coerce").dropna()
-        if is_log:
-            all_vals = all_vals.abs()
-            all_vals = all_vals[all_vals > 0]
+        if is_scalar_param:
+            all_scalar_vals = pd.Series(list(r_pristine_by_device.values()))
+            all_vals = all_scalar_vals[all_scalar_vals > 0] if is_log else all_scalar_vals
+        else:
+            if param not in box_table.columns:
+                continue
+            all_vals = pd.to_numeric(box_table[param], errors="coerce").dropna()
+            if is_log:
+                all_vals = all_vals.abs()
+                all_vals = all_vals[all_vals > 0]
 
         if not all_vals.empty:
             has_any_data = True
