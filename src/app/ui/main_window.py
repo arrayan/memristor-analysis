@@ -1,5 +1,6 @@
 import PySide6.QtWidgets as qt
-from PySide6.QtCore import QThread, Qt
+from PySide6.QtCore import QThread, Qt, QUrl
+from PySide6.QtGui import QDesktopServices
 from .menu_bar import MenuBar
 from .navigation_bar import NavigationBar
 from ..core import MenuAction, Mode
@@ -37,14 +38,6 @@ class MainWindow(qt.QMainWindow):
         )
         menu_actions[MenuAction.IMPORT_STACK].triggered.connect(
             lambda: self.handle_import(mode=Mode.STACK)
-        )
-
-        # Plot Controls
-        menu_actions[MenuAction.SCALE_LINEAR].triggered.connect(
-            lambda: self.apply_to_active(lambda v: v.set_scale("linear"))
-        )
-        menu_actions[MenuAction.SCALE_LOG].triggered.connect(
-            lambda: self.apply_to_active(lambda v: v.set_scale("log"))
         )
 
         # Export menu for current
@@ -97,6 +90,9 @@ class MainWindow(qt.QMainWindow):
         menu_actions[MenuAction.EXPORT_ALL_TXT].triggered.connect(
             lambda checked=False: self.export_all("txt")
         )
+
+        # Link to GH-Wiki
+        menu_actions[MenuAction.VIEW_HELP].triggered.connect(self.open_wiki)
 
     def export_current(self, fmt: str):
 
@@ -246,3 +242,10 @@ class MainWindow(qt.QMainWindow):
         if temp_dir.exists() and temp_dir.is_dir():
             shutil.rmtree(temp_dir)
         self.close()
+
+    def open_wiki(self):
+        """Opens the GitHub Wiki in the default browser."""
+        url = QUrl(
+            "https://github.com/arrayan/memristor-analysis/wiki/Memristor-Analysis-Tool-Wiki"
+        )
+        QDesktopServices.openUrl(url)
