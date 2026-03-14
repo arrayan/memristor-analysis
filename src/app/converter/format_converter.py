@@ -8,6 +8,8 @@ class FormatConverter:
 
     def convert(self, input_path, output_path):
 
+        print(">>> FormatConverter is running <<<")
+
         input_path = Path(input_path)
         output_path = Path(output_path)
 
@@ -20,7 +22,7 @@ class FormatConverter:
 
         # -------- duckdb --------
         elif suffix == ".duckdb":
-            processor = DuckDBFileProcessor()
+            processor = DuckDBFileProcessor(str(input_path))
             result = processor.process(str(input_path))
 
             if result.cycles_df is None:
@@ -49,4 +51,5 @@ class FormatConverter:
             data_frame.write_excel(output_path)
 
         else:
-            raise ValueError("false format")
+            raise ValueError(f"Unsupported output format '{suffix}'. " "Supported formats are: .csv, .txt, .xlsx")
+
