@@ -36,77 +36,17 @@ def main() -> None:
 
 
 
-    # CDF stack level
-    def write_stack_level_cdf_figs():
-        stack_cdf_dir = cfg.output_dir / "cdfs_stack_level"
-        stack_cdf_dir.mkdir(parents=True, exist_ok=True)
-
-        stack_cdf_figs = build_stack_level_cdf_figs(
-            cdf_table=data.cdf_table,
-            stack_id=stack_id,
-            devices=devices,
-        )
-        for fig in stack_cdf_figs:
-            pid = fig.layout.meta.get("param_id")
-            _write(fig, stack_cdf_dir / f"{pid}.html")
-            _write_json(fig, stack_cdf_dir / f"{pid}.json")
-
-    write_stack_level_cdf_figs()
 
 
 
-    # Stack level boxplots
-    def write_stack_level_boxplots():
-        stack_dir = cfg.output_dir / "boxplots_stack_level"
-        stack_dir.mkdir(parents=True, exist_ok=True)
-
-        stack_figs = build_stack_level_boxplots(
-            box_table=data.box_table,
-            stack_id=stack_id,
-            devices=devices,
-        )
-        for fig in stack_figs:
-            pid = fig.layout.meta.get("param_id")
-            _write(fig, stack_dir / f"{pid}.html")
-            _write_json(fig, stack_dir / f"{pid}.json")
-
-    write_stack_level_boxplots()
 
 
 
-    # Correlation scatter
-    def write_correlation_scatter_figs():
-        stack_corr_dir = cfg.output_dir / "correlation_plots_stack_level"
-        stack_corr_dir.mkdir(parents=True, exist_ok=True)
 
-        stack_corr_figs = build_stack_level_correlation_figs(
-            scatter_df=data.scatter_df,
-            stack_id=stack_id,
-            devices=devices,
-        )
-        for fig in stack_corr_figs:
-            pid = fig.layout.meta.get("param_id")
-            _write(fig, stack_corr_dir / f"{pid}.html")
-            _write_json(fig, stack_corr_dir / f"{pid}.json")
 
-    write_correlation_scatter_figs()
 
-    # Correlation matrix
-    def write_correlation_matrix_figs():
-        stack_matrix_dir = cfg.output_dir / "correlation_matrices_stack_level"
-        stack_matrix_dir.mkdir(parents=True, exist_ok=True)
 
-        stack_matrix_figs = build_stack_level_correlation_matrix_figs(
-            scatter_df=data.scatter_df,
-            stack_id=stack_id,
-            devices=devices,
-        )
-        for fig in stack_matrix_figs:
-            pid = fig.layout.meta.get("param_id")
-            _write(fig, stack_matrix_dir / f"{pid}.html")
-            _write_json(fig, stack_matrix_dir / f"{pid}.json")
 
-    write_correlation_matrix_figs()
 
     def plot_device() -> None:
         # Characteristic (set + reset)
@@ -188,6 +128,71 @@ def main() -> None:
                 pid = fig.layout.meta.get("param_id")
                 _write(fig, matrix_dir / f"{pid}.html")
                 _write_json(fig, matrix_dir / f"{pid}.json")
+        write_correlation_matrix_figs()
+
+    def plot_stack() -> None:
+        # CDF stack level
+        def write_stack_level_cdf_figs():
+            stack_cdf_dir = cfg.output_dir / "cdfs_stack_level"
+            stack_cdf_dir.mkdir(parents=True, exist_ok=True)
+
+            stack_cdf_figs = build_stack_level_cdf_figs(
+                cdf_table=data.cdf_table,
+                stack_id=stack_id,
+                devices=devices,
+            )
+            for fig in stack_cdf_figs:
+                pid = fig.layout.meta.get("param_id")
+                _write(fig, stack_cdf_dir / f"{pid}.html")
+                _write_json(fig, stack_cdf_dir / f"{pid}.json")
+        write_stack_level_cdf_figs()
+
+        # Stack level boxplots
+        def write_stack_level_boxplots():
+            stack_dir = cfg.output_dir / "boxplots_stack_level"
+            stack_dir.mkdir(parents=True, exist_ok=True)
+
+            stack_figs = build_stack_level_boxplots(
+                box_table=data.box_table,
+                stack_id=stack_id,
+                devices=devices,
+            )
+            for fig in stack_figs:
+                pid = fig.layout.meta.get("param_id")
+                _write(fig, stack_dir / f"{pid}.html")
+                _write_json(fig, stack_dir / f"{pid}.json")
+        write_stack_level_boxplots()
+
+        # Correlation scatter
+        def write_correlation_scatter_figs():
+            stack_corr_dir = cfg.output_dir / "correlation_plots_stack_level"
+            stack_corr_dir.mkdir(parents=True, exist_ok=True)
+
+            stack_corr_figs = build_stack_level_correlation_figs(
+                scatter_df=data.scatter_df,
+                stack_id=stack_id,
+                devices=devices,
+            )
+            for fig in stack_corr_figs:
+                pid = fig.layout.meta.get("param_id")
+                _write(fig, stack_corr_dir / f"{pid}.html")
+                _write_json(fig, stack_corr_dir / f"{pid}.json")
+        write_correlation_scatter_figs()
+
+        # Correlation matrix
+        def write_correlation_matrix_figs():
+            stack_matrix_dir = cfg.output_dir / "correlation_matrices_stack_level"
+            stack_matrix_dir.mkdir(parents=True, exist_ok=True)
+
+            stack_matrix_figs = build_stack_level_correlation_matrix_figs(
+                scatter_df=data.scatter_df,
+                stack_id=stack_id,
+                devices=devices,
+            )
+            for fig in stack_matrix_figs:
+                pid = fig.layout.meta.get("param_id")
+                _write(fig, stack_matrix_dir / f"{pid}.html")
+                _write_json(fig, stack_matrix_dir / f"{pid}.json")
         write_correlation_matrix_figs()
 
 if __name__ == "__main__":
