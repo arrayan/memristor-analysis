@@ -1,7 +1,6 @@
 import duckdb
 from pathlib import Path
 from app.converter.models import ProcessingResult
-import polars as pl
 
 class DuckDBFileProcessor:
 

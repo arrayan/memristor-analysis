@@ -1,39 +1,19 @@
 from __future__ import annotations
-import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 import plotly.express as px
-from .utils import has_valid_data
+from .fig_cdf import _cdf_xy
+from .utils import has_valid_data, find_device_sets, log_axis_config
 
 
-def _cdf_xy(values: pd.Series, is_log: bool) -> tuple[np.ndarray, np.ndarray]:
+def build_stack_level_cdf_figs(
+    cdf_table: "pd.DataFrame", stack_id: str, devices: list[str]
+) -> list[go.Figure]:
     """
-    Return sorted x and cumulative probability in percent.
-    If is_log is True, applies absolute magnitude and filters out <= 0.
+    Stack-Level CDFs: one curve per device (aggregated) PLUS a unified
+    'All Devices' curve combining the entire stack into one dataset.
     """
-    v = pd.to_numeric(values, errors="coerce").dropna()
-
-    if is_log:
-        v = v.abs()
-        v = v[v > 0]
-
-    v = v.to_numpy()
-
-    if v.size == 0:
-        return np.array([]), np.array([])
-
-    x = np.sort(v)
-    y = (np.arange(1, x.size + 1) / x.size) * 100.0
-    return x, y
-
-
-def build_cdf_figs(cdf_table: "pd.DataFrame", sets: list[str]) -> list[go.Figure]:
-    """
-    Creates a list of CDF Figure objects, one for each parameter.
-    Each figure shows individual curves per source file PLUS a unified
-    'All Data' curve aggregating all sets into one dataset.
-    """
-    if not has_valid_data(cdf_table, sets):
+    if not has_valid_data(cdf_table, devices):
         return []
 
     param_map = {
@@ -46,11 +26,8 @@ def build_cdf_figs(cdf_table: "pd.DataFrame", sets: list[str]) -> list[go.Figure
         "I_leakage_pristine": {"pretty": "I_leakage pristine (A)", "scale": "log"},
     }
 
-    cols = px.colors.sample_colorscale("Viridis", max(len(sets), 2))
-    color_map = {s: cols[i] for i, s in enumerate(sets)}
-
-    tick_vals = [10.0**i for i in range(-15, 16)]
-    tick_text = [f"1e{i}" if i != 0 else "1" for i in range(-15, 16)]
+    cols = px.colors.sample_colorscale("Viridis", max(len(devices), 2))
+    color_map = {d: cols[i] for i, d in enumerate(devices)}
 
     figures = []
 
@@ -63,10 +40,11 @@ def build_cdf_figs(cdf_table: "pd.DataFrame", sets: list[str]) -> list[go.Figure
         has_any_data = False
         all_x_vals = []
 
-        # Individual curves per source file
-        for s in sets:
-            df_s = cdf_table[cdf_table["source_file"] == s]
-            x, y = _cdf_xy(df_s[param], is_log=is_log)
+        # One curve per device (aggregated across all its sets)
+        for device in devices:
+            device_sets = find_device_sets(cdf_table, device, stack_id=stack_id)
+            df_device = cdf_table[cdf_table["source_file"].isin(device_sets)]
+            x, y = _cdf_xy(df_device[param], is_log=is_log)
 
             if x.size > 0:
                 has_any_data = True
@@ -76,16 +54,16 @@ def build_cdf_figs(cdf_table: "pd.DataFrame", sets: list[str]) -> list[go.Figure
                         x=x,
                         y=y,
                         mode="lines+markers",
-                        name=s,
+                        name=device,
                         marker=dict(size=4),
-                        line=dict(color=color_map.get(s), width=1.5),
-                        opacity=0.6,
-                        legendgroup="individual",
+                        line=dict(color=color_map.get(device), width=2),
+                        opacity=0.8,
+                        legendgroup="devices",
                         hovertemplate="%{x}<br>%{y:.1f}%<extra></extra>",
                     )
                 )
 
-        # Unified "All Data" curve — all sets combined into one dataset
+        # Unified "All Devices" curve — entire stack as one dataset
         x_all, y_all = _cdf_xy(cdf_table[param], is_log=is_log)
         if x_all.size > 0:
             has_any_data = True
@@ -95,7 +73,7 @@ def build_cdf_figs(cdf_table: "pd.DataFrame", sets: list[str]) -> list[go.Figure
                     x=x_all,
                     y=y_all,
                     mode="lines",
-                    name="All Data (unified)",
+                    name="All Devices (unified)",
                     line=dict(color="black", width=2.5),
                     legendgroup="unified",
                     hovertemplate="All<br>%{x}<br>%{y:.1f}%<extra></extra>",
@@ -105,9 +83,6 @@ def build_cdf_figs(cdf_table: "pd.DataFrame", sets: list[str]) -> list[go.Figure
         if is_log:
             xaxis_kwargs = dict(
                 type="log",
-                tickmode="array",
-                tickvals=tick_vals,
-                ticktext=tick_text,
                 title_text=f"|{info['pretty']}|",
                 exponentformat="power",
                 showgrid=True,
@@ -115,17 +90,7 @@ def build_cdf_figs(cdf_table: "pd.DataFrame", sets: list[str]) -> list[go.Figure
                 zeroline=False,
                 minor=dict(showgrid=False),
             )
-
-            if all_x_vals:
-                lmin = np.log10(min(all_x_vals))
-                lmax = np.log10(max(all_x_vals))
-                if (lmax - lmin) < 1.0:
-                    mid = (lmin + lmax) / 2
-                    xaxis_kwargs["range"] = [mid - 0.55, mid + 0.55]
-                else:
-                    pad = (lmax - lmin) * 0.05
-                    xaxis_kwargs["range"] = [lmin - pad, lmax + pad]
-
+            xaxis_kwargs.update(log_axis_config(all_x_vals))
             fig.update_xaxes(**xaxis_kwargs)
         else:
             fig.update_xaxes(
@@ -146,12 +111,12 @@ def build_cdf_figs(cdf_table: "pd.DataFrame", sets: list[str]) -> list[go.Figure
         )
 
         fig.update_layout(
-            title=f"CDF – {info['pretty']} ({info['scale'].capitalize()} Scale)",
+            title=f"Stack {stack_id} – CDF {info['pretty']} ({info['scale'].capitalize()} Scale) | Device-Level",
             width=900,
             height=600,
             template="plotly_white",
             showlegend=True,
-            meta={"param_id": param},
+            meta={"param_id": param, "level": "stack", "stack_id": stack_id},
         )
 
         if not has_any_data:

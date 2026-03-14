@@ -1,17 +1,23 @@
 from __future__ import annotations
 
+import os
 from dataclasses import dataclass
 from pathlib import Path
+from app.core.paths import DB_FILE, TEMP_DIR
+from app.core.modes import Mode
 
 
 @dataclass(frozen=True)
 class Config:
     db_file: Path
     output_dir: Path
+    mode: Mode
 
     # File name patterns
     endurance_set_like: str = "%endurance_set%"
+    endurance_reset_like: str = "%endurance_reset%"
     electroforming_like: str = "%electroforming%"
+    leakage_like: str = "%leakage%"
 
     # Output HTML files
     characteristic_html: str = "characteristic_plots.html"
@@ -22,22 +28,25 @@ class Config:
 
 
 def load_config() -> Config:
-    # DB path from environment variable (portable across machines)
-    db = Path(__file__).parent.parent.parent.parent / "output.duckdb"
-    if not db:
-        raise RuntimeError(
-            "MEMRISTOR_DB is not set.\n"
-            "Set it like:\n"
-            "  export MEMRISTOR_DB='/path/to/memristor_data.duckdb'\n"
+    mode_str = os.environ.get("MEMRISTOR_MODE", Mode.DEVICE.value)
+    mode = Mode(mode_str)
+
+    # If the DB doesn't exist at this stage, the plotting pipeline cannot proceed.
+    if not DB_FILE.exists():
+        raise FileNotFoundError(
+            f"Database file not found at: {DB_FILE}\n\n"
+            "Possible causes:\n"
+            "- No data has been imported yet.\n"
+            "- The source folder did not contain the expected .xlsx files.\n"
+            "- Permission error in the AppData directory."
         )
 
-    db_file = Path(db).expanduser().resolve()
-    if not db_file.exists():
-        raise FileNotFoundError(f"DuckDB file not found: {db_file}")
-
-    # Output directory defaults to project_root/output (project_root = parent of plotting/)
-    project_root = Path(__file__).resolve().parent.parent
-    output_dir = project_root / "temp" / "device"
+    # Point directly to AppData temp subfolder
+    output_dir = TEMP_DIR / mode.value
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    return Config(db_file=db_file, output_dir=output_dir)
+    return Config(
+        db_file=DB_FILE,  # Absolute path to AppData
+        output_dir=output_dir,
+        mode=mode,
+    )

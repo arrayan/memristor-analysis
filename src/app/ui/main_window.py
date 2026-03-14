@@ -47,7 +47,7 @@ class MainWindow(qt.QMainWindow):
             lambda: self.apply_to_active(lambda v: v.set_scale("log"))
         )
 
-        # Export menu for current and all
+        # Export menu for current
         menu_actions[MenuAction.EXPORT_CURRENT_PNG].triggered.connect(
             lambda checked=False: self.export_current("png")
         )
@@ -59,6 +59,20 @@ class MainWindow(qt.QMainWindow):
         menu_actions[MenuAction.EXPORT_CURRENT_EPS].triggered.connect(
             lambda checked=False: self.export_current("eps")
         )
+        menu_actions[MenuAction.EXPORT_CURRENT_SVG].triggered.connect(
+            lambda checked=False: self.export_current("SVG")
+        )
+        menu_actions[MenuAction.EXPORT_CURRENT_PDF].triggered.connect(
+            lambda checked=False: self.export_current("pdf")
+        )
+        menu_actions[MenuAction.EXPORT_CURRENT_CSV].triggered.connect(
+            lambda checked=False: self.export_current("csv")
+        )
+        menu_actions[MenuAction.EXPORT_CURRENT_TXT].triggered.connect(
+            lambda checked=False: self.export_current("txt")
+        )
+
+        # Export menu for all
 
         menu_actions[MenuAction.EXPORT_ALL_PNG].triggered.connect(
             lambda checked=False: self.export_all("png")
@@ -70,6 +84,18 @@ class MainWindow(qt.QMainWindow):
 
         menu_actions[MenuAction.EXPORT_ALL_EPS].triggered.connect(
             lambda checked=False: self.export_all("eps")
+        )
+        menu_actions[MenuAction.EXPORT_ALL_SVG].triggered.connect(
+            lambda checked=False: self.export_all("svg")
+        )
+        menu_actions[MenuAction.EXPORT_ALL_PDF].triggered.connect(
+            lambda checked=False: self.export_all("pdf")
+        )
+        menu_actions[MenuAction.EXPORT_ALL_CSV].triggered.connect(
+            lambda checked=False: self.export_all("csv")
+        )
+        menu_actions[MenuAction.EXPORT_ALL_TXT].triggered.connect(
+            lambda checked=False: self.export_all("txt")
         )
 
     def export_current(self, fmt: str):
@@ -90,7 +116,10 @@ class MainWindow(qt.QMainWindow):
         if not file_path:
             return
 
-        ok = viewer.export_image(file_path, fmt)
+        if fmt in {"csv", "txt"}:
+            ok = viewer.export_data(file_path, fmt)
+        else:
+            ok = viewer.export_image(file_path, fmt)
 
         if not ok:
             qt.QMessageBox.warning(
@@ -120,7 +149,10 @@ class MainWindow(qt.QMainWindow):
 
             path = Path(folder) / f"{filename}.{fmt}"
 
-            viewer.export_image(str(path), fmt)
+            if fmt in {"csv", "txt"}:
+                viewer.export_data(str(path), fmt)
+            else:
+                viewer.export_image(str(path), fmt)
 
     # Helper to get the figure
     def _get_figure(self, viewer):
@@ -191,8 +223,7 @@ class MainWindow(qt.QMainWindow):
     def on_import_success(self):
         self.pd.close()
         # Force the NavigationBar to reload the tabs (which now have new HTML files)
-        self.nav_bar.level_dropdown.setCurrentText("Device Level")
-        self.nav_bar.update_tabs_by_level("Device Level")
+        self.nav_bar.update_tabs_by_level()
         qt.QMessageBox.information(
             self, "Success", "Data imported and plots generated successfully."
         )

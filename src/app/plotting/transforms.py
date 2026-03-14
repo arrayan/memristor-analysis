@@ -2,101 +2,187 @@ from __future__ import annotations
 
 import numpy as np
 import pandas as pd
+from pathlib import Path
 
 
-def compute_v_reset(df_set: pd.DataFrame) -> pd.DataFrame:
+def _device_from_source(source_file: str, stack_id: str = "") -> str | None:
+    """Extract device name from source_file by stripping the known stack_id prefix.
+
+    e.g. stack_id="H25094_b1", source_file="H25094_b1_B12_03_endurance_set" → "B12"
     """
-    V_reset per cycle: AV value at max(|AI|) for that cycle.
-    Expects columns: cycle_number, AV, AI
-    Returns: cycle_number, V_reset
-    """
-    if df_set.empty:
+    stem = Path(source_file).stem
+    if stack_id and stem.startswith(f"{stack_id}_"):
+        remainder = stem[len(stack_id) + 1 :]
+        parts = remainder.split("_")
+        return parts[0] if parts and parts[0] else None
+    # fallback: first token after first underscore
+    parts = stem.split("_")
+    return parts[1] if len(parts) >= 2 else None
+
+
+def _map_per_device(
+    source_files: pd.Series, device_map: dict[str, float], stack_id: str = ""
+) -> pd.Series:
+    """Map a per-device dict onto a Series of source_file strings."""
+    return source_files.map(
+        lambda sf: device_map.get(_device_from_source(sf, stack_id))
+    )
+
+
+def compute_v_reset(df_reset: pd.DataFrame) -> pd.DataFrame:
+    if df_reset.empty:
         return pd.DataFrame(columns=["cycle_number", "V_reset"])
 
-    # idx of max abs(AI) per cycle
-    idx = df_set.groupby("cycle_number")["AI"].apply(lambda s: s.abs().idxmax())
+    # Use pre-computed VRESET column if available
+    if "VRESET" in df_reset.columns:
+        out = (
+            df_reset[df_reset["VRESET"].notna()][["cycle_number", "VRESET"]]
+            .drop_duplicates("cycle_number")
+            .rename(columns={"VRESET": "V_reset"})
+            .reset_index(drop=True)
+        )
+        return out
+
+    # Fallback: compute from raw AV at max |AI|
+    idx = df_reset.groupby("cycle_number")["AI"].apply(lambda s: s.abs().idxmax())
     out = (
-        df_set.loc[idx, ["cycle_number", "AV"]]
+        df_reset.loc[idx, ["cycle_number", "AV"]]
         .rename(columns={"AV": "V_reset"})
         .reset_index(drop=True)
     )
     return out
 
 
-def compute_i_reset_max(df_set: pd.DataFrame) -> pd.DataFrame:
-    """
-    I_reset_max per cycle: max(|AI|) for that cycle.
-    Expects columns: cycle_number, AI
-    Returns: cycle_number, I_reset_max
-    """
-    if df_set.empty:
+def compute_i_reset_max(df_reset: pd.DataFrame) -> pd.DataFrame:
+    if df_reset.empty:
         return pd.DataFrame(columns=["cycle_number", "I_reset_max"])
 
+    # Use pre-computed IRESET column if available
+    if "IRESET" in df_reset.columns:
+        out = (
+            df_reset[df_reset["IRESET"].notna()][["cycle_number", "IRESET"]]
+            .drop_duplicates("cycle_number")
+            .rename(columns={"IRESET": "I_reset_max"})
+            .reset_index(drop=True)
+        )
+        return out
+
+    # Fallback: compute max |AI| per cycle
     out = (
-        df_set.groupby("cycle_number")["AI"]
+        df_reset.groupby("cycle_number")["AI"]
         .apply(lambda s: s.abs().max())
         .reset_index(name="I_reset_max")
     )
     return out
 
 
-def build_cdf_table(
-    classic_df: pd.DataFrame,
-    raw_by_set: dict[str, pd.DataFrame],
-    v_forming_global: float | None,
+def _assign_reset_by_position(
+    classic: pd.DataFrame,
+    vreset: pd.DataFrame,
+    ireset: pd.DataFrame,
 ) -> pd.DataFrame:
     """
-    Produces table used by CDF plot:
-    classic_df columns: source_file, cycle_number, VSET, R_LRS, R_HRS
-    adds: V_reset, I_reset_max, V_forming
+    Assign V_reset and I_reset_max by row position rather than cycle_number.
+    This handles cases where reset files restart cycle numbering from 1
+    instead of continuing from where the set file left off.
     """
-    parts_v = []
-    parts_i = []
+    classic = classic.reset_index(drop=True)
+    if not vreset.empty:
+        classic["V_reset"] = vreset["V_reset"].reindex(classic.index).values
+    else:
+        classic["V_reset"] = np.nan
+    if not ireset.empty:
+        classic["I_reset_max"] = ireset["I_reset_max"].reindex(classic.index).values
+    else:
+        classic["I_reset_max"] = np.nan
+    return classic
 
-    for s, df_set in raw_by_set.items():
-        v = compute_v_reset(df_set)
-        v["source_file"] = s
-        parts_v.append(v)
 
-        i = compute_i_reset_max(df_set)
-        i["source_file"] = s
-        parts_i.append(i)
+def build_cdf_table(
+    classic_df: pd.DataFrame,
+    raw_by_reset: dict[str, pd.DataFrame],
+    v_forming: float | None | dict[str, float],
+    leakage_i: dict[str, float] | None = None,
+    stack_id: str = "",
+) -> pd.DataFrame:
+    """
+    Produces table used by CDF plot.
+    classic_df columns: source_file, cycle_number, VSET, R_LRS, R_HRS
+    adds: V_reset, I_reset_max, V_forming, I_leakage_pristine
+    """
+    # Build per-set_key positional reset values
+    vreset_parts = []
+    ireset_parts = []
 
-    vreset_df = (
-        pd.concat(parts_v, ignore_index=True)
-        if parts_v
-        else pd.DataFrame(columns=["cycle_number", "V_reset", "source_file"])
-    )
-    ireset_df = (
-        pd.concat(parts_i, ignore_index=True)
-        if parts_i
-        else pd.DataFrame(columns=["cycle_number", "I_reset_max", "source_file"])
-    )
+    for s, df_reset in raw_by_reset.items():
+        set_key = s.replace("endurance_reset", "endurance_set")
 
-    out = classic_df.merge(
-        vreset_df, on=["source_file", "cycle_number"], how="left"
-    ).merge(ireset_df, on=["source_file", "cycle_number"], how="left")
-    out["V_forming"] = v_forming_global
+        vreset = compute_v_reset(df_reset).reset_index(drop=True)
+        ireset = compute_i_reset_max(df_reset).reset_index(drop=True)
+
+        # Get the classic rows for this set, sorted by cycle_number
+        classic_set = (
+            classic_df[classic_df["source_file"] == set_key]
+            .sort_values("cycle_number")
+            .reset_index(drop=True)
+        )
+
+        if classic_set.empty:
+            continue
+
+        # Assign by position
+        classic_set = _assign_reset_by_position(classic_set, vreset, ireset)
+        vreset_parts.append(classic_set[["source_file", "cycle_number", "V_reset"]])
+        ireset_parts.append(classic_set[["source_file", "cycle_number", "I_reset_max"]])
+
+    if vreset_parts:
+        vreset_df = pd.concat(vreset_parts, ignore_index=True)
+        ireset_df = pd.concat(ireset_parts, ignore_index=True)
+        out = classic_df.merge(
+            vreset_df, on=["source_file", "cycle_number"], how="left"
+        )
+        out = out.merge(ireset_df, on=["source_file", "cycle_number"], how="left")
+    else:
+        out = classic_df.copy()
+        out["V_reset"] = np.nan
+        out["I_reset_max"] = np.nan
+
+    # V_forming — per-device dict or global scalar
+    if isinstance(v_forming, dict):
+        out["V_forming"] = _map_per_device(out["source_file"], v_forming, stack_id)
+    else:
+        out["V_forming"] = v_forming
+
+    # I_leakage_pristine — per-device dict
+    if leakage_i:
+        out["I_leakage_pristine"] = _map_per_device(
+            out["source_file"], leakage_i, stack_id
+        )
+
     return out
 
 
 def build_box_table(
     classic_df: pd.DataFrame,
-    raw_by_set: dict[str, pd.DataFrame],
-    v_forming_global: float | None,
+    raw_by_reset: dict[str, pd.DataFrame],
+    v_forming: float | None | dict[str, float],
+    leakage_i: dict[str, float] | None = None,
+    stack_id: str = "",
 ) -> pd.DataFrame:
-    """
-    Same underlying merged table as CDF; keeping it separate lets you rename columns differently later if needed.
-    """
-    return build_cdf_table(classic_df, raw_by_set, v_forming_global)
+    return build_cdf_table(
+        classic_df, raw_by_reset, v_forming, leakage_i, stack_id=stack_id
+    )
 
 
-def build_endurance_table(raw_by_set: dict[str, pd.DataFrame]) -> pd.DataFrame:
+def build_endurance_table(
+    raw_by_set: dict[str, pd.DataFrame],
+    raw_by_reset: dict[str, pd.DataFrame],
+) -> pd.DataFrame:
     """
     Produces per-cycle endurance table for all sets.
     Output includes:
-      source_file, cycle_number, V_set, V_reset, I_LRS, I_HRS, R_LRS, R_HRS, I_reset_max, Memory_window
-    Expects per-set raw df columns: cycle_number, AV, AI, VSET, ILRS, IHRS (and Time is fine too)
+      source_file, cycle_number, V_set, V_reset, I_LRS, I_HRS,
+      R_LRS, R_HRS, I_reset_max, Memory_window
     """
     all_sets = []
 
@@ -104,25 +190,33 @@ def build_endurance_table(raw_by_set: dict[str, pd.DataFrame]) -> pd.DataFrame:
         if df_set.empty:
             continue
 
-        # classic per-cycle summary
         classic = (
             df_set.groupby("cycle_number")
             .agg(
                 V_set=("VSET", "max"),
                 I_LRS=("ILRS", "last"),
                 I_HRS=("IHRS", "last"),
-                R_LRS=("ILRS", "max"),
-                R_HRS=("IHRS", "max"),
-                I_reset_max=("AI", lambda x: x.abs().max()),
             )
             .reset_index()
+            .sort_values("cycle_number")
+            .reset_index(drop=True)
         )
 
-        vreset = compute_v_reset(df_set)
-        cycle_df = classic.merge(vreset, on="cycle_number", how="left")
+        MIN_CURRENT = 1e-10  # below 0.1 nA is treated as unmeasured
+        i_lrs = classic["I_LRS"].abs()
+        i_hrs = classic["I_HRS"].abs()
+        classic["R_LRS"] = 0.2 / i_lrs.where(i_lrs > MIN_CURRENT)
+        classic["R_HRS"] = 0.2 / i_hrs.where(i_hrs > MIN_CURRENT)
+        classic["Memory_window"] = classic["R_HRS"] / classic["R_LRS"]
 
-        # Derived
-        cycle_df["Memory_window"] = cycle_df["R_HRS"] / cycle_df["R_LRS"]
+        reset_key = s.replace("endurance_set", "endurance_reset")
+        df_reset = raw_by_reset.get(reset_key, pd.DataFrame())
+
+        vreset = compute_v_reset(df_reset).reset_index(drop=True)
+        ireset = compute_i_reset_max(df_reset).reset_index(drop=True)
+
+        # Use positional assignment instead of cycle_number merge
+        cycle_df = _assign_reset_by_position(classic, vreset, ireset)
         cycle_df["source_file"] = s
 
         all_sets.append(cycle_df)
@@ -133,25 +227,19 @@ def build_endurance_table(raw_by_set: dict[str, pd.DataFrame]) -> pd.DataFrame:
 def build_scatter_table(end_df: pd.DataFrame) -> pd.DataFrame:
     """
     Table for device-level correlation scatter plots.
-    Ensures R_HRS and R_LRS are available (computed from V_set and currents).
     """
     if end_df.empty:
         return pd.DataFrame()
 
-    df = end_df[
-        [
-            "source_file",
-            "cycle_number",
-            "V_set",
-            "V_reset",
-            "I_HRS",
-            "I_LRS",
-            "I_reset_max",
-        ]
-    ].copy()
-
-    # avoid division by zero
-    df["R_HRS"] = df["V_set"] / df["I_HRS"].abs().replace(0, np.nan)
-    df["R_LRS"] = df["V_set"] / df["I_LRS"].abs().replace(0, np.nan)
-
-    return df
+    cols = [
+        "source_file",
+        "cycle_number",
+        "V_set",
+        "V_reset",
+        "I_HRS",
+        "I_LRS",
+        "R_LRS",
+        "R_HRS",
+        "I_reset_max",
+    ]
+    return end_df[[c for c in cols if c in end_df.columns]].copy()

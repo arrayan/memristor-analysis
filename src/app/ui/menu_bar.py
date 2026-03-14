@@ -35,6 +35,7 @@ class MenuBar(qt.QMenuBar):
         self.file_menu.addSection("Export")
         self.file_sub_menu_export_all = self.file_menu.addMenu("All To")
         self.file_sub_menu_export_current = self.file_menu.addMenu("Current To")
+        # Populate "All To" submenu
         self.file_sub_menu_export_all.addAction(
             self.menu_actions[MenuAction.EXPORT_ALL_PNG]
         )
@@ -44,6 +45,20 @@ class MenuBar(qt.QMenuBar):
         self.file_sub_menu_export_all.addAction(
             self.menu_actions[MenuAction.EXPORT_ALL_EPS]
         )
+        self.file_sub_menu_export_all.addAction(
+            self.menu_actions[MenuAction.EXPORT_ALL_SVG]
+        )
+        self.file_sub_menu_export_all.addAction(
+            self.menu_actions[MenuAction.EXPORT_ALL_PDF]
+        )
+        self.file_sub_menu_export_all.addSeparator()
+        self.file_sub_menu_export_all.addAction(
+            self.menu_actions[MenuAction.EXPORT_ALL_CSV]
+        )
+        self.file_sub_menu_export_all.addAction(
+            self.menu_actions[MenuAction.EXPORT_ALL_TXT]
+        )
+        # Populate "Current To"
         self.file_sub_menu_export_current.addAction(
             self.menu_actions[MenuAction.EXPORT_CURRENT_PNG]
         )
@@ -52,6 +67,19 @@ class MenuBar(qt.QMenuBar):
         )
         self.file_sub_menu_export_current.addAction(
             self.menu_actions[MenuAction.EXPORT_CURRENT_EPS]
+        )
+        self.file_sub_menu_export_current.addAction(
+            self.menu_actions[MenuAction.EXPORT_CURRENT_SVG]
+        )
+        self.file_sub_menu_export_current.addAction(
+            self.menu_actions[MenuAction.EXPORT_CURRENT_PDF]
+        )
+        self.file_sub_menu_export_current.addSeparator()
+        self.file_sub_menu_export_current.addAction(
+            self.menu_actions[MenuAction.EXPORT_CURRENT_CSV]
+        )
+        self.file_sub_menu_export_current.addAction(
+            self.menu_actions[MenuAction.EXPORT_CURRENT_TXT]
         )
         self.file_menu.addAction(self.menu_actions[MenuAction.EXPORT_ALL])
         self.file_menu.addAction(self.menu_actions[MenuAction.EXPORT_CURRENT])
