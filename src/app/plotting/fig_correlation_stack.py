@@ -110,7 +110,7 @@ def build_stack_level_correlation_figs(
 
         param_id = f"{x_col}_vs_{y_col}"
         fig.update_layout(
-            title=f"Stack {stack_id} – Correlation: {title_text} | Device-Level",
+            title=f"Stack {stack_id} – Correlation: {title_text}",
             width=900,
             height=700,
             template="plotly_white",
