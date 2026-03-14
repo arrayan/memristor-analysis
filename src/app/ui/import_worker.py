@@ -1,8 +1,11 @@
 import os
+import shutil
+from pathlib import Path
 
 from PySide6.QtCore import QObject, Signal, Slot
-from app.core.paths import DB_FILE
+from app.core.paths import DB_FILE, TEMP_FOLDER
 from app.plotting.run import main as run_plotting_pipeline
+from app.core.modes import Mode
 
 
 class ImportWorker(QObject):
@@ -11,7 +14,7 @@ class ImportWorker(QObject):
     finished = Signal()
     error = Signal(str)
 
-    def __init__(self, path, mode, converter_class):
+    def __init__(self, path: Path, mode: Mode, converter_class):
         super().__init__()
         self.path = path
         self.mode = mode
@@ -22,6 +25,14 @@ class ImportWorker(QObject):
         try:
             # set variable
             os.environ["MEMRISTOR_MODE"] = self.mode.value
+
+            temp_folder = TEMP_FOLDER / self.mode.value
+            # remove old temp data
+            if temp_folder.exists():
+                shutil.rmtree(temp_folder, ignore_errors=True)
+
+            # recreate temp folder
+            temp_folder.mkdir(parents=True, exist_ok=True)
 
             # --- STEP 1: Data Conversion (Importing to DuckDB) ---
             self.status_message.emit("Phase 1/2: Updating database from raw files...")
