@@ -3,9 +3,9 @@ import shutil
 from pathlib import Path
 
 from PySide6.QtCore import QObject, Signal, Slot
-from app.core.paths import DB_FILE, TEMP_DIR
-from app.plotting.run import main as run_plotting_pipeline
-from app.core.modes import Mode
+from ..core.paths import DB_FILE, TEMP_DIR
+from ..plotting.run import main as run_plotting_pipeline
+from ..core.modes import Mode
 
 
 class ImportWorker(QObject):
@@ -48,7 +48,7 @@ class ImportWorker(QObject):
             self.status_message.emit("Phase 1/2: Updating database from raw files...")
             self.progress.emit(10)
 
-            converter = self.converter_class("output.duckdb")
+            converter = self.converter_class(DB_FILE)
             converter.convert(self.path)
 
             self.progress.emit(50)
@@ -60,7 +60,7 @@ class ImportWorker(QObject):
 
             # This calls the 'main()' function from your plotting script exactly as it is.
             # It will load the config, read the DB, and write the files.
-            run_plotting_pipeline(mode=self.mode.value.lower())
+            run_plotting_pipeline()
 
             self.progress.emit(100)
             self.finished.emit()
