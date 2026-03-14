@@ -109,6 +109,7 @@ class NavigationBar(qt.QTabWidget):
             "VSET": "V Set",
             "V_forming": "V Forming",
             "I_leakage_pristine": "I Leakage Pristine",
+            "R_pristine": "R Pristine",
         }
 
         corr_labels = {
