@@ -1,9 +1,11 @@
 import os
+import shutil
+from pathlib import Path
 
 from PySide6.QtCore import QObject, Signal, Slot
-
-# Replace 'plotting_module' with the actual filename/path of your plotting script
-from ..plotting.run import main as run_plotting_pipeline
+from app.core.paths import DB_FILE, TEMP_DIR
+from app.plotting.run import main as run_plotting_pipeline
+from app.core.modes import Mode
 
 
 class ImportWorker(QObject):
@@ -12,7 +14,7 @@ class ImportWorker(QObject):
     finished = Signal()
     error = Signal(str)
 
-    def __init__(self, path, mode, converter_class):
+    def __init__(self, path: Path, mode: Mode, converter_class):
         super().__init__()
         self.path = path
         self.mode = mode
@@ -23,6 +25,24 @@ class ImportWorker(QObject):
         try:
             # set variable
             os.environ["MEMRISTOR_MODE"] = self.mode.value
+
+            temp_dir = TEMP_DIR / self.mode.value
+            # remove old temp data
+            if temp_dir.exists():
+                try:
+                    # Attempt to delete the directory
+                    shutil.rmtree(temp_dir)
+                except Exception as e:
+                    # If deletion fails, raise a user-friendly error
+                    raise RuntimeError(
+                        f"Could not clear the temporary folder for {self.mode.value}.\n\n"
+                        f"Reason: {str(e)}\n\n"
+                        "Please ensure no plot files are currently open in your browser "
+                        "or other applications, then try the import again."
+                    )
+
+            # recreate temp folder
+            temp_dir.mkdir(parents=True, exist_ok=True)
 
             # --- STEP 1: Data Conversion (Importing to DuckDB) ---
             self.status_message.emit("Phase 1/2: Updating database from raw files...")

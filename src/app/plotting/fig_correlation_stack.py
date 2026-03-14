@@ -44,7 +44,7 @@ def build_stack_level_correlation_figs(
         all_x, all_y = [], []
 
         for device in devices:
-            device_sets = find_device_sets(scatter_df, device)
+            device_sets = find_device_sets(scatter_df, device, stack_id=stack_id)
 
             # aggregate
             df_device = scatter_df[scatter_df["source_file"].isin(device_sets)].copy()

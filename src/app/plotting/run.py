@@ -1,5 +1,4 @@
 from __future__ import annotations
-from pathlib import Path
 
 from .config import load_config
 from .pipeline import load_all
@@ -30,38 +29,8 @@ def main() -> None:
     cfg = load_config()
     data = load_all(cfg)
 
-    stack_id = getattr(data, "stack_id", None)
-    if stack_id is None:
-        if data.sets:
-            sample_path = Path(next(iter(data.sets)))
-            stack_id = (
-                sample_path.stem.split("_")[0]
-                if "_" in sample_path.stem
-                else sample_path.stem
-            )
-            print(f"Info: Inferred stack_id from sets: {stack_id}")
-        else:
-            stack_id = "Unknown"
-            print("Warning: No sets found, using Unknown as stack_id")
-
-    devices = []
-    if data.sets and stack_id != "Unknown":
-        device_set = set()
-        for s in data.sets:
-            path = Path(s)
-            stem = path.stem
-            if stem.startswith(f"{stack_id}_"):
-                remainder = stem[len(stack_id) + 1 :]
-                if "_" in remainder:
-                    device = remainder.split("_")[0]
-                else:
-                    device = remainder
-                if device:
-                    device_set.add(device)
-        devices = sorted(device_set)
-
-    if not devices:
-        print(f"Warning: No devices found for stack {stack_id}")
+    stack_id = data.stack_id
+    devices = data.devices
 
     # Characteristic (set + reset)
     def write_characteristic_figs():
@@ -191,6 +160,7 @@ def main() -> None:
             scatter_df=data.scatter_df,
             sets=data.sets,
             devices=devices,
+            stack_id=stack_id,
         )
         for fig in matrix_figs:
             pid = fig.layout.meta.get("param_id")

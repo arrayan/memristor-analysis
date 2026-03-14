@@ -1,5 +1,5 @@
 import PySide6.QtWidgets as qt
-from PySide6.QtGui import QAction, QActionGroup
+from PySide6.QtGui import QAction
 from ..core import MenuAction
 
 
@@ -21,7 +21,6 @@ class MenuBar(qt.QMenuBar):
             self.menu_actions[action] = menu_action
 
         self.setup_file_menu()
-        self.setup_options_menu()
         self.setup_help_menu()
 
     def setup_file_menu(self):
@@ -86,19 +85,6 @@ class MenuBar(qt.QMenuBar):
         self.file_menu.addSeparator()
 
         self.file_menu.addAction(self.menu_actions[MenuAction.EXIT])
-
-    def setup_options_menu(self):
-        self.options_menu = self.addMenu("Options")
-        scale = QActionGroup(self)
-        scale.setExclusive(True)
-        scale_lin = self.menu_actions[MenuAction.SCALE_LINEAR]
-        scale_log = self.menu_actions[MenuAction.SCALE_LOG]
-        scale.addAction(scale_lin)
-        scale_lin.setChecked(True)
-        scale.addAction(scale_log)
-
-        self.options_menu.addSection("Scale")
-        self.options_menu.addActions([scale_lin, scale_log])
 
     def setup_help_menu(self):
         self.help_menu = self.addMenu("Help")

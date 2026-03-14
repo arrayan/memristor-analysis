@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from pathlib import Path
 
 import duckdb
 import pandas as pd
@@ -21,6 +20,8 @@ from .transforms import (
 class LoadedData:
     sets: list[str]
     resets: list[str]
+    stack_id: str
+    devices: list[str]
 
     # raw
     raw_characteristic: dict[str, pd.DataFrame]  # cycle_number, Time, AV, AI, NORM_COND
@@ -39,17 +40,6 @@ class LoadedData:
     box_table: pd.DataFrame
     end_df: pd.DataFrame
     scatter_df: pd.DataFrame
-
-
-def _infer_devices(sets: list[str]) -> list[str]:
-    """Infer device names from set filenames (e.g. H25098_A10_03_endurance_set)."""
-    device_set: set[str] = set()
-    for s in sets:
-        stem = Path(s).stem
-        parts = stem.split("_")
-        if len(parts) >= 2:
-            device_set.add(parts[1])
-    return sorted(device_set)
 
 
 def load_all(cfg: Config) -> LoadedData:
@@ -75,7 +65,8 @@ def load_all(cfg: Config) -> LoadedData:
         sets = repo.list_endurance_sets(cfg.endurance_set_like)
         resets = repo.list_endurance_resets(cfg.endurance_reset_like)
 
-        devices = _infer_devices(sets)
+        stack_id = repo.get_stack_id() or "Unknown"
+        devices = repo.list_devices()
 
         # raw for characteristic plot (set files)
         raw_characteristic = {s: repo.load_cycles_for_set(s) for s in sets}
@@ -98,10 +89,18 @@ def load_all(cfg: Config) -> LoadedData:
 
         # transforms (no DB needed)
         cdf_table = build_cdf_table(
-            classic, raw_reset, forming_v_by_device, leakage_i_by_device
+            classic,
+            raw_reset,
+            forming_v_by_device,
+            leakage_i_by_device,
+            stack_id=stack_id,
         )
         box_table = build_box_table(
-            classic, raw_reset, forming_v_by_device, leakage_i_by_device
+            classic,
+            raw_reset,
+            forming_v_by_device,
+            leakage_i_by_device,
+            stack_id=stack_id,
         )
         end_df = build_endurance_table(raw_endurance, raw_reset)
         scatter_df = build_scatter_table(end_df)
@@ -109,6 +108,8 @@ def load_all(cfg: Config) -> LoadedData:
         return LoadedData(
             sets=sets,
             resets=resets,
+            stack_id=stack_id,
+            devices=devices,
             raw_characteristic=raw_characteristic,
             raw_endurance=raw_endurance,
             raw_reset=raw_reset,
