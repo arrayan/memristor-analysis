@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from .config import load_config
-from .pipeline import load_all
+from .config import Config, load_config
+from .pipeline import LoadedData, load_all
 
 from .fig_characteristic import build_characteristic_figs
 from .fig_cdf import build_cdf_figs
@@ -13,6 +13,7 @@ from .fig_boxplots_stack import build_stack_level_boxplots
 from .fig_cdf_stack import build_stack_level_cdf_figs
 from .fig_correlation_matrix import build_correlation_matrix_figs
 from .fig_correlation_matrix_stack import build_stack_level_correlation_matrix_figs
+from app.core.modes import Mode
 
 
 def _write(fig, out_path) -> None:
@@ -25,7 +26,9 @@ def _write_json(fig, out_path) -> None:
     print("Wrote:", out_path)
 
 
-def plot_device() -> None:
+def plot_device(
+    cfg: Config, data: LoadedData, stack_id: str, devices: list[str]
+) -> None:
     # Characteristic (set + reset)
     def write_characteristic_figs():
         char_dir = cfg.output_dir / "characteristic_plots"
@@ -40,6 +43,7 @@ def plot_device() -> None:
             pid = fig.layout.meta.get("param_id")
             _write(fig, char_dir / f"{pid}.html")
             _write_json(fig, char_dir / f"{pid}.json")
+
     write_characteristic_figs()
 
     # CDF
@@ -52,6 +56,7 @@ def plot_device() -> None:
             pid = fig.layout.meta.get("param_id")
             _write(fig, cdf_dir / f"{pid}.html")
             _write_json(fig, cdf_dir / f"{pid}.json")
+
     write_cdf_figs()
 
     # Boxplots
@@ -64,6 +69,7 @@ def plot_device() -> None:
             pid = fig.layout.meta.get("param_id")
             _write(fig, boxplot_dir / f"{pid}.html")
             _write_json(fig, boxplot_dir / f"{pid}.json")
+
     write_boxplot_figs()
 
     # Endurance performance vs cycle
@@ -76,6 +82,7 @@ def plot_device() -> None:
             pid = fig.layout.meta.get("param_id")
             _write(fig, end_dir / f"{pid}.html")
             _write_json(fig, end_dir / f"{pid}.json")
+
     write_endurance_figs()
 
     # Correlation scatter
@@ -88,6 +95,7 @@ def plot_device() -> None:
             pid = fig.layout.meta.get("param_id")
             _write(fig, char_dir / f"{pid}.html")
             _write_json(fig, char_dir / f"{pid}.json")
+
     write_correlation_scatter_figs()
 
     # Correlation matrix
@@ -105,10 +113,13 @@ def plot_device() -> None:
             pid = fig.layout.meta.get("param_id")
             _write(fig, matrix_dir / f"{pid}.html")
             _write_json(fig, matrix_dir / f"{pid}.json")
+
     write_correlation_matrix_figs()
 
 
-def plot_stack() -> None:
+def plot_stack(
+    cfg: Config, data: LoadedData, stack_id: str, devices: list[str]
+) -> None:
     # CDF stack level
     def write_stack_level_cdf_figs():
         stack_cdf_dir = cfg.output_dir / "cdfs_stack_level"
@@ -123,6 +134,7 @@ def plot_stack() -> None:
             pid = fig.layout.meta.get("param_id")
             _write(fig, stack_cdf_dir / f"{pid}.html")
             _write_json(fig, stack_cdf_dir / f"{pid}.json")
+
     write_stack_level_cdf_figs()
 
     # Stack level boxplots
@@ -139,6 +151,7 @@ def plot_stack() -> None:
             pid = fig.layout.meta.get("param_id")
             _write(fig, stack_dir / f"{pid}.html")
             _write_json(fig, stack_dir / f"{pid}.json")
+
     write_stack_level_boxplots()
 
     # Correlation scatter
@@ -155,6 +168,7 @@ def plot_stack() -> None:
             pid = fig.layout.meta.get("param_id")
             _write(fig, stack_corr_dir / f"{pid}.html")
             _write_json(fig, stack_corr_dir / f"{pid}.json")
+
     write_correlation_scatter_figs()
 
     # Correlation matrix
@@ -171,6 +185,7 @@ def plot_stack() -> None:
             pid = fig.layout.meta.get("param_id")
             _write(fig, stack_matrix_dir / f"{pid}.html")
             _write_json(fig, stack_matrix_dir / f"{pid}.json")
+
     write_correlation_matrix_figs()
 
 
@@ -183,9 +198,9 @@ def main() -> None:
 
     # create plots depending on mode
     if cfg.mode is Mode.DEVICE:
-        plot_device()
-    else: # cfg.mode is Mode.STACK
-        plot_stack()
+        plot_device(cfg, data, stack_id, devices)
+    else:  # cfg.mode is Mode.STACK
+        plot_stack(cfg, data, stack_id, devices)
 
 
 if __name__ == "__main__":
