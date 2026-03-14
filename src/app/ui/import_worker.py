@@ -3,9 +3,9 @@ import shutil
 from pathlib import Path
 
 from PySide6.QtCore import QObject, Signal, Slot
-from ..core.paths import DB_FILE, TEMP_DIR
-from ..plotting.run import main as run_plotting_pipeline
-from ..core.modes import Mode
+from app.core.paths import DB_FILE, TEMP_DIR
+from app.plotting.run import main as run_plotting_pipeline
+from app.core.modes import Mode
 
 
 class ImportWorker(QObject):
@@ -60,7 +60,7 @@ class ImportWorker(QObject):
 
             # This calls the 'main()' function from your plotting script exactly as it is.
             # It will load the config, read the DB, and write the files.
-            run_plotting_pipeline()
+            run_plotting_pipeline(mode=self.mode.value.lower())
 
             self.progress.emit(100)
             self.finished.emit()
