@@ -213,6 +213,7 @@ def build_box_table(
 def build_endurance_table(
     raw_by_set: dict[str, pd.DataFrame],
     raw_by_reset: dict[str, pd.DataFrame],
+    v_read: float = 0.2,
 ) -> pd.DataFrame:
     """
     Produces per-cycle endurance table for all sets.
@@ -256,8 +257,8 @@ def build_endurance_table(
         MIN_CURRENT = 1e-10
         i_lrs = classic["I_LRS"].abs()
         i_hrs = classic["I_HRS"].abs()
-        classic["R_LRS"] = 0.2 / i_lrs.where(i_lrs > MIN_CURRENT)
-        classic["R_HRS"] = 0.2 / i_hrs.where(i_hrs > MIN_CURRENT)
+        classic["R_LRS"] = v_read / i_lrs.where(i_lrs > MIN_CURRENT)
+        classic["R_HRS"] = v_read / i_hrs.where(i_hrs > MIN_CURRENT)
         classic["Memory_window"] = classic["R_HRS"] / classic["R_LRS"]
 
         vreset = compute_v_reset(df_reset).reset_index(drop=True)

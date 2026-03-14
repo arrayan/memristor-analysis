@@ -7,7 +7,11 @@ from .utils import has_valid_data, find_device_sets, log_axis_config
 
 
 def build_stack_level_cdf_figs(
-    cdf_table: "pd.DataFrame", stack_id: str, devices: list[str]
+    cdf_table: "pd.DataFrame",
+    stack_id: str,
+    devices: list[str],
+    leakage_i_by_device: "dict[str, float] | None" = None,
+    v_read: float = 0.2,
 ) -> list[go.Figure]:
     """
     Stack-Level CDFs: one curve per device (aggregated) PLUS a unified
@@ -26,13 +30,23 @@ def build_stack_level_cdf_figs(
         "I_leakage_pristine": {"pretty": "I_leakage pristine (A)", "scale": "log"},
     }
 
+    # Build per-device R_pristine scalar dict
+    r_pristine_by_device: dict[str, float] = {}
+    if leakage_i_by_device:
+        for device, il in leakage_i_by_device.items():
+            if il is not None and abs(il) > 0:
+                r_pristine_by_device[device] = v_read / abs(il)
+
+    if "R_pristine" not in param_map and r_pristine_by_device:
+        param_map["R_pristine"] = {"pretty": "R_pristine (Ω)", "scale": "log"}
+
     cols = px.colors.sample_colorscale("Viridis", max(len(devices), 2))
     color_map = {d: cols[i] for i, d in enumerate(devices)}
 
     figures = []
 
     for param, info in param_map.items():
-        if param not in cdf_table.columns:
+        if param != "R_pristine" and param not in cdf_table.columns:
             continue
 
         fig = go.Figure()
@@ -40,11 +54,22 @@ def build_stack_level_cdf_figs(
         has_any_data = False
         all_x_vals = []
 
+        is_scalar_param = param == "R_pristine"
+
         # One curve per device (aggregated across all its sets)
         for device in devices:
-            device_sets = find_device_sets(cdf_table, device, stack_id=stack_id)
-            df_device = cdf_table[cdf_table["source_file"].isin(device_sets)]
-            x, y = _cdf_xy(df_device[param], is_log=is_log)
+            if is_scalar_param:
+                val = r_pristine_by_device.get(device)
+                if val is None:
+                    continue
+                import numpy as np
+
+                x = np.array([val])
+                y = np.array([100.0])
+            else:
+                device_sets = find_device_sets(cdf_table, device, stack_id=stack_id)
+                df_device = cdf_table[cdf_table["source_file"].isin(device_sets)]
+                x, y = _cdf_xy(df_device[param], is_log=is_log)
 
             if x.size > 0:
                 has_any_data = True
@@ -64,7 +89,15 @@ def build_stack_level_cdf_figs(
                 )
 
         # Unified "All Devices" curve — entire stack as one dataset
-        x_all, y_all = _cdf_xy(cdf_table[param], is_log=is_log)
+        if is_scalar_param:
+            import numpy as np
+
+            all_scalar = sorted(r_pristine_by_device.values())
+            x_all = np.array(all_scalar)
+            y_all = (np.arange(1, len(x_all) + 1) / len(x_all)) * 100.0
+        else:
+            x_all, y_all = _cdf_xy(cdf_table[param], is_log=is_log)
+
         if x_all.size > 0:
             has_any_data = True
             all_x_vals.extend(x_all)

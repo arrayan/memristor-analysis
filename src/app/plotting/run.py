@@ -129,6 +129,8 @@ def plot_stack(
             cdf_table=data.cdf_table,
             stack_id=stack_id,
             devices=devices,
+            leakage_i_by_device=data.leakage_i_by_device,
+            v_read=data.v_read,
         )
         for fig in stack_cdf_figs:
             pid = fig.layout.meta.get("param_id")
@@ -146,6 +148,8 @@ def plot_stack(
             box_table=data.box_table,
             stack_id=stack_id,
             devices=devices,
+            leakage_i_by_device=data.leakage_i_by_device,
+            v_read=data.v_read,
         )
         for fig in stack_figs:
             pid = fig.layout.meta.get("param_id")
@@ -163,6 +167,10 @@ def plot_stack(
             scatter_df=data.scatter_df,
             stack_id=stack_id,
             devices=devices,
+            forming_v_by_device=data.forming_v_by_device,
+            leakage_i_by_device=data.leakage_i_by_device,
+            first_v_reset=data.first_v_reset,
+            v_read=data.v_read,
         )
         for fig in stack_corr_figs:
             pid = fig.layout.meta.get("param_id")
@@ -180,6 +188,10 @@ def plot_stack(
             scatter_df=data.scatter_df,
             stack_id=stack_id,
             devices=devices,
+            forming_v_by_device=data.forming_v_by_device,
+            leakage_i_by_device=data.leakage_i_by_device,
+            first_v_reset=data.first_v_reset,
+            v_read=data.v_read,
         )
         for fig in stack_matrix_figs:
             pid = fig.layout.meta.get("param_id")

@@ -34,6 +34,8 @@ class LoadedData:
     forming_v: float | None  # global forming voltage
     forming_v_by_device: dict[str, float]  # per-device forming voltage
     leakage_i_by_device: dict[str, float]  # per-device leakage current (pristine)
+    v_read: float  # read voltage from leakage file
+    first_v_reset: dict[str, float]  # per-device 1st V_reset
 
     classic: pd.DataFrame
     cdf_table: pd.DataFrame
@@ -84,8 +86,10 @@ def load_all(cfg: Config) -> LoadedData:
         leakage_i_by_device = repo.load_leakage_current_per_device(
             devices, cfg.leakage_like
         )
+        first_v_reset = repo.load_first_v_reset(cfg.endurance_reset_like)
+        v_read = repo.load_v_read(cfg.leakage_like)
 
-        classic = repo.load_classic_cycle_params_for_sets(sets)
+        classic = repo.load_classic_cycle_params_for_sets(sets, v_read=v_read)
 
         # transforms (no DB needed)
         cdf_table = build_cdf_table(
@@ -102,7 +106,7 @@ def load_all(cfg: Config) -> LoadedData:
             leakage_i_by_device,
             stack_id=stack_id,
         )
-        end_df = build_endurance_table(raw_endurance, raw_reset)
+        end_df = build_endurance_table(raw_endurance, raw_reset, v_read=v_read)
         scatter_df = build_scatter_table(end_df)
 
         return LoadedData(
@@ -116,6 +120,8 @@ def load_all(cfg: Config) -> LoadedData:
             forming_v=forming_v,
             forming_v_by_device=forming_v_by_device,
             leakage_i_by_device=leakage_i_by_device,
+            first_v_reset=first_v_reset,
+            v_read=v_read,
             classic=classic,
             cdf_table=cdf_table,
             box_table=box_table,

@@ -126,14 +126,15 @@ class MemristorRepository:
         leakage_like: str = "%leakage%",
     ) -> dict[str, float]:
         """
-        Per-device leakage current: MAX(|AI|) from each device's leakage file.
+        Per-device leakage current: MAX(ILEAKAGE) from each device's leakage file.
+        Reads the pre-computed ILEAKAGE column directly.
         Returns {device: I_leakage_pristine}.
         """
         result = {}
         for device in devices:
             df = self.conn.execute(
                 """
-                SELECT MAX(ABS(AI)) AS il
+                SELECT MAX(ILEAKAGE) AS il
                 FROM cycles
                 WHERE source_file ILIKE ?
                   AND device_row || CAST(device_col AS VARCHAR) = ?
@@ -145,6 +146,72 @@ class MemristorRepository:
                 if not pd.isna(val):
                     result[device] = float(val)
         return result
+
+    def load_v_read(self, leakage_like: str = "%leakage%") -> float:
+        """
+        Read voltage = ABS(AV) from the row where ILEAKAGE is set.
+        Reads directly from the leakage file so V_read is not hardcoded.
+        """
+        df = self.conn.execute(
+            """
+            SELECT ABS(AV) AS v_read
+            FROM cycles
+            WHERE source_file ILIKE ?
+              AND ILEAKAGE IS NOT NULL
+            LIMIT 1
+            """,
+            [leakage_like],
+        ).df()
+        if df.empty or pd.isna(df["v_read"].iloc[0]):
+            return 0.2  # fallback
+        return float(df["v_read"].iloc[0])
+
+    def load_first_v_reset(
+        self, endurance_reset_like: str = "%endurance_reset%"
+    ) -> dict[str, float]:
+        """
+        1st V_reset per device = VRESET from the very first reset cycle of the device.
+        "First" = MIN(source_file) to get the earliest file, then MIN(cycle_number)
+        within that file. Reads the pre-computed VRESET column directly.
+        Returns: {device: first_v_reset}
+        """
+        df = self.conn.execute(
+            """
+            WITH device_first_file AS (
+                SELECT device_row || CAST(device_col AS VARCHAR) AS device,
+                       MIN(source_file) AS first_file
+                FROM cycles
+                WHERE source_file ILIKE ?
+                GROUP BY device
+            ),
+            device_first_cycle AS (
+                SELECT dff.device,
+                       dff.first_file,
+                       MIN(c.cycle_number) AS first_cn
+                FROM cycles c
+                JOIN device_first_file dff ON c.source_file = dff.first_file
+                GROUP BY dff.device, dff.first_file
+            )
+            SELECT dfc.device,
+                   MAX(c.VRESET) AS first_v_reset
+            FROM cycles c
+            JOIN device_first_cycle dfc
+              ON c.source_file = dfc.first_file
+             AND c.cycle_number = dfc.first_cn
+            WHERE c.VRESET IS NOT NULL
+            GROUP BY dfc.device
+            """,
+            [endurance_reset_like],
+        ).df()
+
+        if df.empty:
+            return {}
+
+        return {
+            row["device"]: float(row["first_v_reset"])
+            for _, row in df.iterrows()
+            if not pd.isna(row["first_v_reset"]) and row["device"] is not None
+        }
 
     def load_forming_voltage_global(
         self, electroforming_like: str = "%electroforming%"
@@ -164,10 +231,12 @@ class MemristorRepository:
         val = df["V_forming_global"].iloc[0]
         return None if pd.isna(val) else float(val)
 
-    def load_classic_cycle_params_for_sets(self, sets: list[str]) -> pd.DataFrame:
+    def load_classic_cycle_params_for_sets(
+        self, sets: list[str], v_read: float = 0.2
+    ) -> pd.DataFrame:
         """
         Per (source_file, cycle_number) classic params used by CDF/boxplots.
-        R_LRS = 0.2 / I_LRS, R_HRS = 0.2 / I_HRS as per spec.
+        R_LRS = v_read / I_LRS, R_HRS = v_read / I_HRS as per spec.
         """
         if not sets:
             return pd.DataFrame(
@@ -178,15 +247,15 @@ class MemristorRepository:
             """
             SELECT source_file,
                    cycle_number,
-                   MAX(VSET)                                          AS VSET,
-                   MAX(ILRS)                                          AS I_LRS,
-                   MAX(IHRS)                                          AS I_HRS,
-                   0.2 / NULLIF(MAX(CAST(ILRS AS DOUBLE)), 0.0)      AS R_LRS,
-                   0.2 / NULLIF(MAX(CAST(IHRS AS DOUBLE)), 0.0)      AS R_HRS
+                   MAX(VSET)                                               AS VSET,
+                   MAX(ILRS)                                               AS I_LRS,
+                   MAX(IHRS)                                               AS I_HRS,
+                   ? / NULLIF(MAX(CAST(ILRS AS DOUBLE)), 0.0)             AS R_LRS,
+                   ? / NULLIF(MAX(CAST(IHRS AS DOUBLE)), 0.0)             AS R_HRS
             FROM cycles
             WHERE source_file IN (SELECT * FROM UNNEST(?))
             GROUP BY source_file, cycle_number
             ORDER BY source_file, cycle_number
             """,
-            [sets],
+            [v_read, v_read, sets],
         ).df()
