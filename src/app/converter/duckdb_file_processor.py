@@ -4,7 +4,6 @@ from app.converter.models import ProcessingResult
 
 
 class DuckDBFileProcessor:
-
     def __init__(self, output_path):
         self.output_path = output_path
 
@@ -25,4 +24,3 @@ class DuckDBFileProcessor:
             result.warnings.append(str(e))
 
         return result
-
