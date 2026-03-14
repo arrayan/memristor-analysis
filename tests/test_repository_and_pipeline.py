@@ -14,6 +14,7 @@ import duckdb
 from app.plotting.repository import MemristorRepository
 from app.plotting.transforms import (
     build_endurance_table,
+    compute_i_lrs_from_reset,
     _device_from_source,
 )
 
@@ -239,58 +240,145 @@ class TestListEnduranceResets:
         assert "H25098_A10_03_endurance_set" not in result
 
 
+# ── Transforms: compute_i_lrs_from_reset ────────────────────────────────────
+
+
+class TestComputeILrsFromReset:
+    def test_returns_last_ireset_per_cycle(self):
+        df_reset = pd.DataFrame(
+            {
+                "cycle_number": [1, 1, 2, 2],
+                "IRESET": [1e-4, 2e-4, 3e-4, 4e-4],
+                "AI": [0.0, 0.0, 0.0, 0.0],
+            }
+        )
+        result = compute_i_lrs_from_reset(df_reset)
+        assert result[result["cycle_number"] == 1]["I_LRS"].iloc[0] == pytest.approx(
+            2e-4
+        )
+        assert result[result["cycle_number"] == 2]["I_LRS"].iloc[0] == pytest.approx(
+            4e-4
+        )
+
+    def test_abs_value_of_negative_ireset(self):
+        df_reset = pd.DataFrame(
+            {
+                "cycle_number": [1],
+                "IRESET": [-1e-4],
+                "AI": [0.0],
+            }
+        )
+        result = compute_i_lrs_from_reset(df_reset)
+        assert result["I_LRS"].iloc[0] == pytest.approx(1e-4)
+        assert result["I_LRS"].iloc[0] > 0
+
+    def test_empty_df_returns_empty(self):
+        result = compute_i_lrs_from_reset(pd.DataFrame())
+        assert result.empty
+        assert "I_LRS" in result.columns
+
+    def test_all_zero_ireset_returns_empty(self):
+        df_reset = pd.DataFrame(
+            {
+                "cycle_number": [1, 2],
+                "IRESET": [0.0, 0.0],
+                "AI": [1e-4, 2e-4],
+            }
+        )
+        result = compute_i_lrs_from_reset(df_reset)
+        assert result.empty
+
+    def test_fallback_to_ai_when_no_ireset_column(self):
+        df_reset = pd.DataFrame(
+            {
+                "cycle_number": [1, 1],
+                "AI": [-1e-4, -2e-4],
+            }
+        )
+        result = compute_i_lrs_from_reset(df_reset)
+        assert result["I_LRS"].iloc[0] == pytest.approx(2e-4)
+
+    def test_nan_ireset_values_excluded(self):
+        df_reset = pd.DataFrame(
+            {
+                "cycle_number": [1, 2],
+                "IRESET": [float("nan"), 3e-4],
+                "AI": [0.0, 0.0],
+            }
+        )
+        result = compute_i_lrs_from_reset(df_reset)
+        assert len(result) == 1
+        assert result["I_LRS"].iloc[0] == pytest.approx(3e-4)
+
+
 # ── Transforms: edge cases ───────────────────────────────────────────────────
 
 
 class TestBuildEnduranceTableEdgeCases:
-    def test_zero_i_lrs_gives_nan_r_lrs(self):
-        """Division by zero should produce NaN, not crash."""
-        df_set = pd.DataFrame(
+    def _make_set(self, i_hrs=1e-6):
+        return pd.DataFrame(
             {
                 "cycle_number": [1],
                 "Time": [0.0],
                 "AV": [-0.5],
                 "AI": [-1e-4],
                 "VSET": [1.5],
-                "ILRS": [0.0],  # zero current
-                "IHRS": [1e-6],
+                "ILRS": [0.0],  # ignored — I_LRS now comes from reset
+                "IHRS": [i_hrs],
             }
         )
-        result = build_endurance_table({"H25098_A10_03_endurance_set": df_set}, {})
+
+    def _make_reset(self, ireset=1e-3, vreset=0.8):
+        return pd.DataFrame(
+            {
+                "cycle_number": [1],
+                "Time": [0.0],
+                "AV": [vreset],
+                "AI": [-ireset],
+                "VRESET": [vreset],
+                "IRESET": [ireset],
+            }
+        )
+
+    def test_zero_ireset_gives_nan_r_lrs(self):
+        """Zero IRESET in reset file should produce NaN R_LRS."""
+        df_set = self._make_set()
+        df_reset = self._make_reset(ireset=0.0)
+        result = build_endurance_table(
+            {"H25098_A10_03_endurance_set": df_set},
+            {"H25098_A10_03_endurance_reset": df_reset},
+        )
         assert pd.isna(result["R_LRS"].iloc[0])
 
-    def test_negative_i_lrs_gives_positive_resistance(self):
-        """Negative current values should still yield positive resistance."""
-        df_set = pd.DataFrame(
-            {
-                "cycle_number": [1],
-                "Time": [0.0],
-                "AV": [-0.5],
-                "AI": [-1e-4],
-                "VSET": [1.5],
-                "ILRS": [-1e-3],  # negative current
-                "IHRS": [-1e-6],
-            }
+    def test_negative_ireset_gives_positive_resistance(self):
+        """Negative IRESET should still yield positive R_LRS."""
+        df_set = self._make_set()
+        df_reset = self._make_reset(ireset=-1e-3)
+        result = build_endurance_table(
+            {"H25098_A10_03_endurance_set": df_set},
+            {"H25098_A10_03_endurance_reset": df_reset},
         )
-        result = build_endurance_table({"H25098_A10_03_endurance_set": df_set}, {})
         assert result["R_LRS"].iloc[0] == pytest.approx(0.2 / 1e-3)
         assert result["R_LRS"].iloc[0] > 0
 
     def test_memory_window_always_positive(self):
-        """Memory window must be positive regardless of current sign."""
-        df_set = pd.DataFrame(
-            {
-                "cycle_number": [1],
-                "Time": [0.0],
-                "AV": [-0.5],
-                "AI": [-1e-4],
-                "VSET": [1.5],
-                "ILRS": [-1e-3],
-                "IHRS": [-1e-6],
-            }
+        """Memory window must be positive."""
+        df_set = self._make_set(i_hrs=1e-6)
+        df_reset = self._make_reset(ireset=1e-3)
+        result = build_endurance_table(
+            {"H25098_A10_03_endurance_set": df_set},
+            {"H25098_A10_03_endurance_reset": df_reset},
         )
-        result = build_endurance_table({"H25098_A10_03_endurance_set": df_set}, {})
         assert result["Memory_window"].iloc[0] > 0
+
+    def test_missing_reset_file_gives_nan_r_lrs(self):
+        """No reset file means I_LRS is NaN, so R_LRS should also be NaN."""
+        df_set = self._make_set()
+        result = build_endurance_table(
+            {"H25098_A10_03_endurance_set": df_set},
+            {},
+        )
+        assert pd.isna(result["R_LRS"].iloc[0])
 
 
 # ── Transforms: _device_from_source ─────────────────────────────────────────
@@ -331,13 +419,15 @@ class TestPipelineSmokeTest:
                 ILRS DOUBLE,
                 IHRS DOUBLE,
                 NORM_COND DOUBLE,
-                VFORM DOUBLE
+                VFORM DOUBLE,
+                VRESET DOUBLE,
+                IRESET DOUBLE
             )
         """)
         # Insert minimal set and reset rows
         for i in range(1, 4):
             c.execute(
-                "INSERT INTO cycles VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                "INSERT INTO cycles VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 [
                     "H25098_A10_03_endurance_set",
                     i,
@@ -349,10 +439,12 @@ class TestPipelineSmokeTest:
                     1e-6,
                     1e-4,
                     None,
+                    None,
+                    None,
                 ],
             )
             c.execute(
-                "INSERT INTO cycles VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                "INSERT INTO cycles VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 [
                     "H25098_A10_03_endurance_reset",
                     i,
@@ -364,10 +456,12 @@ class TestPipelineSmokeTest:
                     0.0,
                     0.0,
                     None,
+                    0.8,
+                    5e-4,
                 ],
             )
             c.execute(
-                "INSERT INTO cycles VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                "INSERT INTO cycles VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 [
                     "H25098_A10_01_Electroforming",
                     i,
@@ -379,10 +473,12 @@ class TestPipelineSmokeTest:
                     0.0,
                     0.0,
                     2.5,
+                    None,
+                    None,
                 ],
             )
             c.execute(
-                "INSERT INTO cycles VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                "INSERT INTO cycles VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 [
                     "H25098_A10_00_leakage",
                     i,
@@ -394,6 +490,8 @@ class TestPipelineSmokeTest:
                     0.0,
                     0.0,
                     None,
+                    None,
+                    None,
                 ],
             )
         c.close()
@@ -401,6 +499,7 @@ class TestPipelineSmokeTest:
         cfg = Config(
             db_file=db_path,
             output_dir=tmp_path / "output",
+            mode="device",
         )
 
         data = load_all(cfg)

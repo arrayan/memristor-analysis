@@ -60,7 +60,7 @@ class ImportWorker(QObject):
 
             # This calls the 'main()' function from your plotting script exactly as it is.
             # It will load the config, read the DB, and write the files.
-            run_plotting_pipeline()
+            run_plotting_pipeline(mode=self.mode.value.lower())
 
             self.progress.emit(100)
             self.finished.emit()
